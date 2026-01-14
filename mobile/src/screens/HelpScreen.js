@@ -1,0 +1,135 @@
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Linking,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+const HelpScreen = ({ navigation }) => {
+  const handleContact = () => {
+    Linking.openURL('mailto:support@zaloclone.com');
+  };
+
+  const faqs = [
+    {
+      question: 'Làm thế nào để bắt đầu chat?',
+      answer: 'Vào màn hình Danh Bạ, chọn người bạn muốn chat và bắt đầu cuộc trò chuyện.',
+    },
+    {
+      question: 'Làm thế nào để gửi ảnh?',
+      answer: 'Trong màn hình chat, nhấn vào icon ảnh và chọn ảnh từ thư viện.',
+    },
+    {
+      question: 'Làm thế nào để tìm kiếm cuộc trò chuyện?',
+      answer: 'Sử dụng thanh tìm kiếm ở đầu màn hình Tin Nhắn để tìm theo tên hoặc nội dung tin nhắn.',
+    },
+    {
+      question: 'Làm thế nào để đổi mật khẩu?',
+      answer: 'Vào Hồ sơ > Bảo mật > Đổi mật khẩu.',
+    },
+  ];
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Câu hỏi thường gặp</Text>
+        
+        {faqs.map((faq, index) => (
+          <View key={index} style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>{faq.question}</Text>
+            <Text style={styles.faqAnswer}>{faq.answer}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Liên hệ hỗ trợ</Text>
+        
+        <TouchableOpacity style={styles.contactItem} onPress={handleContact}>
+          <Ionicons name="mail-outline" size={24} color="#00B14F" />
+          <View style={styles.contactText}>
+            <Text style={styles.contactLabel}>Email hỗ trợ</Text>
+            <Text style={styles.contactValue}>support@zaloclone.com</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.version}>Phiên bản 1.0.0</Text>
+        <Text style={styles.copyright}>© 2024 VTalk. All rights reserved.</Text>
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  section: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 16,
+  },
+  faqItem: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  faqQuestion: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  faqAnswer: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  contactText: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  contactLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 4,
+  },
+  contactValue: {
+    fontSize: 16,
+    color: '#00B14F',
+  },
+  version: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  copyright: {
+    fontSize: 12,
+    color: '#ccc',
+    textAlign: 'center',
+  },
+});
+
+export default HelpScreen;
+

@@ -1,6 +1,6 @@
-# 📱 Chat Application - React Native
+# 📱 VTalk - Full Stack Chat Application
 
-A modern, feature-rich mobile chat application built with React Native, supporting real-time messaging, voice/video calls, and group conversations.
+A modern, feature-rich chat application with React Native mobile app and Node.js backend, supporting real-time messaging, voice/video calls, and group conversations.
 
 ## ✨ Features
 
@@ -9,8 +9,14 @@ A modern, feature-rich mobile chat application built with React Native, supporti
 - **Voice & Video Calls** - WebRTC-powered voice and video calling
 - **Group Chat** - Create and manage group conversations
 - **Contact Management** - Add and manage contacts
-- **User Authentication** - Secure login/registration system
+- **User Authentication** - Secure JWT-based authentication
 - **Profile Management** - Customizable user profiles
+- **File Sharing** - Upload and share images, documents
+- **Message Reactions** - React to messages with emojis
+- **Block/Unblock Users** - User privacy controls
+- **Close Friends** - Special friend categorization
+- **Pinned Messages** - Pin important messages
+- **Nicknames** - Custom display names for contacts
 
 ### 🎨 User Experience
 - **Emoji Reactions** - Quick emoji reactions to messages
@@ -25,6 +31,8 @@ A modern, feature-rich mobile chat application built with React Native, supporti
 - **Push Notifications** - Real-time notification system
 - **Input Validation** - Form validation and error handling
 - **Security** - Secure authentication and data handling
+- **File Upload** - Multer-based file handling
+- **Email Service** - Automated email notifications
 
 ## 🛠️ Tech Stack
 
@@ -34,6 +42,17 @@ A modern, feature-rich mobile chat application built with React Native, supporti
 - **Socket.IO Client** - Real-time communication
 - **WebRTC** - Voice and video calling
 - **AsyncStorage** - Local data storage
+- **Expo** - React Native toolchain
+
+### Backend (Server)
+- **Node.js** - Server runtime
+- **Express.js** - Web application framework
+- **Socket.IO** - Real-time bidirectional communication
+- **SQLite** - Lightweight database
+- **JWT** - JSON Web Tokens for authentication
+- **Multer** - File upload middleware
+- **Nodemailer** - Email service
+- **bcrypt** - Password hashing
 
 ### Development Tools
 - **Metro** - React Native bundler
@@ -49,78 +68,126 @@ A modern, feature-rich mobile chat application built with React Native, supporti
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v16 or higher)
-- React Native CLI
-- Android Studio (for Android development)
-- Xcode (for iOS development - macOS only)
+- **Node.js** (v16 or higher)
+- **npm** or **yarn** package manager
+- **React Native CLI**
+- **Android Studio** (for Android development)
+- **Xcode** (for iOS development - macOS only)
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
-   cd fe-be
+   git clone https://github.com/HuyTapCode05/app-chat-Vtalk.git
+   cd app-chat-Vtalk
    ```
 
-2. **Install dependencies**
+2. **Setup Backend**
    ```bash
-   cd mobile
+   cd backend
    npm install
+   
+   # Create .env file with your configuration
+   cp .env.example .env  # Edit with your settings
+   
+   # Start backend server
+   npm start
    ```
 
-3. **Android Setup**
+3. **Setup Mobile App**
    ```bash
-   # Run on Android
+   cd ../mobile
+   npm install
+   
+   # For Android
    npm run android
    # or
    npx react-native run-android
-   ```
-
-4. **iOS Setup** (macOS only)
-   ```bash
-   # Install iOS dependencies
-   cd ios && pod install && cd ..
    
-   # Run on iOS
+   # For iOS (macOS only)
+   cd ios && pod install && cd ..
    npm run ios
    # or
    npx react-native run-ios
    ```
 
-### Quick Start Scripts
+### Environment Variables
 
-The project includes convenient batch scripts for Windows users:
+Create a `.env` file in the backend directory:
 
-- `START_ALL.bat` - Start all services
-- `START_QUICK.bat` - Quick start for development
-- `REBUILD_APP.bat` - Full rebuild
-- `QUICK_REBUILD.bat` - Quick rebuild
+```env
+PORT=3000
+NODE_ENV=development
+JWT_SECRET=your_jwt_secret_key
+DB_PATH=./database/vtalk.db
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASS=your_app_password
+UPLOAD_PATH=./uploads
+```
 
 ## 🏗️ Project Structure
 
 ```
-mobile/
-├── src/
-│   ├── components/          # Reusable UI components
-│   │   ├── ChatMenu.js
-│   │   ├── EmojiPicker.js
-│   │   ├── LoadingSpinner.js
-│   │   └── ...
-│   ├── screens/            # Screen components
-│   │   ├── ChatScreen.js
-│   │   ├── LoginScreen.js
-│   │   ├── ProfileScreen.js
-│   │   └── ...
-│   ├── context/            # React Context providers
-│   │   ├── AuthContext.js
-│   │   └── SocketContext.js
-│   ├── hooks/              # Custom React hooks
-│   ├── utils/              # Utility functions
-│   └── config/             # Configuration files
-├── android/                # Android-specific code
-├── ios/                    # iOS-specific code (if applicable)
-└── assets/                 # Static assets
+├── backend/                 # Node.js Backend
+│   ├── config/             # Configuration files
+│   ├── database/           # Database setup
+│   ├── middleware/         # Express middleware
+│   ├── routes/            # API routes
+│   ├── socket/            # Socket.IO handlers
+│   ├── storage/           # Database storage utilities
+│   ├── utils/             # Utility functions
+│   ├── uploads/           # File uploads
+│   ├── .env               # Environment variables
+│   ├── server.js          # Main server file
+│   └── package.json       # Backend dependencies
+├── mobile/                 # React Native Frontend
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── screens/        # Screen components
+│   │   ├── context/        # React Context providers
+│   │   ├── hooks/          # Custom React hooks
+│   │   ├── utils/          # Utility functions
+│   │   └── config/         # Configuration files
+│   ├── android/            # Android-specific code
+│   ├── ios/               # iOS-specific code (if applicable)
+│   └── package.json       # Frontend dependencies
+├── README.md              # Project documentation
+├── LICENSE               # MIT License
+└── .gitignore           # Git ignore rules
 ```
+
+## 📡 API Endpoints
+
+### Authentication
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `GET /api/auth/verify-token` - Verify JWT token
+
+### Users
+- `GET /api/users/profile` - Get user profile
+- `PUT /api/users/profile` - Update user profile
+- `POST /api/users/search` - Search users
+
+### Messages
+- `GET /api/messages/:conversationId` - Get conversation messages
+- `POST /api/messages` - Send message
+- `DELETE /api/messages/:messageId` - Delete message
+
+### Conversations
+- `GET /api/conversations` - Get user conversations
+- `POST /api/conversations` - Create new conversation
+- `PUT /api/conversations/:id` - Update conversation
+
+### Socket Events
+- `connection` - Client connected
+- `join_room` - Join conversation room
+- `send_message` - Send real-time message
+- `typing` - Typing indicator
+- `call_request` - Voice/Video call request
+- `call_response` - Call response
 
 ## 📚 Documentation
 

@@ -15,6 +15,7 @@ const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
 
   const handleLogout = async () => {
+    // On web, use window.confirm for better compatibility
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Bạn có chắc chắn muốn đăng xuất?');
       if (!confirmed) return;

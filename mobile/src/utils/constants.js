@@ -12,6 +12,17 @@ export const MESSAGE_TYPES = {
   TEXT: 'text',
   IMAGE: 'image',
   FILE: 'file',
+  VOICE: 'voice',
+  REPLY: 'reply',
+};
+
+// Message Status
+export const MESSAGE_STATUS = {
+  SENDING: 'sending',
+  SENT: 'sent', 
+  DELIVERED: 'delivered',
+  READ: 'read',
+  FAILED: 'failed',
 };
 
 // Conversation Types

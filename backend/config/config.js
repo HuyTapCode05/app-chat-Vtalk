@@ -35,7 +35,10 @@ const config = {
   // File Upload
   upload: {
     maxSize: 10 * 1024 * 1024, // 10MB
-    allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'],
+    allowedTypes: [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
+      'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac'
+    ],
     destination: './uploads',
   },
   

@@ -26,11 +26,11 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  // Chấp nhận ảnh và file
-  if (file.mimetype.startsWith('image/')) {
+  // Chấp nhận ảnh và audio files
+  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('audio/')) {
     cb(null, true);
   } else {
-    cb(new Error('Chỉ chấp nhận file ảnh'), false);
+    cb(new Error('Chỉ chấp nhận file ảnh và âm thanh'), false);
   }
 };
 

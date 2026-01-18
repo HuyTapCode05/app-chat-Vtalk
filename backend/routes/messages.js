@@ -52,14 +52,24 @@ router.get('/:conversationId', auth, async (req, res) => {
 // @route   POST /api/messages
 // @desc    Tạo message mới
 // @access  Private
-router.post('/', auth, upload.single('image'), async (req, res) => {
+router.post('/', auth, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'voice', maxCount: 1 }
+]), async (req, res) => {
   try {
-    const { conversationId, content, type = 'text' } = req.body;
-    let imageUrl = '';
+    const { conversationId, content, type = 'text', duration } = req.body;
+    let fileUrl = '';
 
-    // Handle image upload
-    if (req.file) {
-      imageUrl = `/uploads/${req.file.filename}`;
+    // Handle file upload (image or voice)
+    if (req.files) {
+      const imageFile = req.files['image'] ? req.files['image'][0] : null;
+      const voiceFile = req.files['voice'] ? req.files['voice'][0] : null;
+      
+      if (imageFile) {
+        fileUrl = `/uploads/${imageFile.filename}`;
+      } else if (voiceFile) {
+        fileUrl = `/uploads/${voiceFile.filename}`;
+      }
     }
 
     if (!conversationId) {
@@ -77,18 +87,26 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
       return res.status(403).json({ message: 'Không có quyền truy cập' });
     }
 
-    const messageContent = type === 'image' ? imageUrl : content;
+    const messageContent = (type === 'image' || type === 'voice') ? fileUrl : content;
     if (!messageContent) {
-      return res.status(400).json({ message: 'Content hoặc image là bắt buộc' });
+      return res.status(400).json({ message: 'Content hoặc file là bắt buộc' });
     }
 
-    const message = await storage.messages.create({
+    // Create message data
+    const messageData = {
       conversation: conversationId,
       sender: req.user.id,
       content: messageContent,
-      type: req.file ? 'image' : type,
+      type: req.files ? (req.files['voice'] ? 'voice' : 'image') : type,
       readBy: []
-    });
+    };
+
+    // Add duration for voice messages
+    if (type === 'voice' && duration) {
+      messageData.duration = parseInt(duration);
+    }
+
+    const message = await storage.messages.create(messageData);
 
     // Update conversation last message
     await storage.conversations.update(conversationId, {

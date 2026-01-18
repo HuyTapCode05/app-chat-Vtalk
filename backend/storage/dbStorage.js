@@ -373,6 +373,11 @@ const messageStorage = {
       updatedAt: now
     };
 
+    // Add duration for voice messages
+    if (messageData.duration) {
+      message.duration = messageData.duration;
+    }
+
     const messages = await this.loadMessages(messageData.conversation);
     messages.push(message);
     await this.saveMessages(messageData.conversation, messages);

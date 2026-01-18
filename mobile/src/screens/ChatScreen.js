@@ -17,15 +17,18 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api, { BASE_URL } from '../config/api';
+import storage from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
 import EmojiPicker from '../components/EmojiPicker';
 import MessageMenu from '../components/MessageMenu';
 import ChatMenu from '../components/ChatMenu';
 import QuickReactions from '../components/QuickReactions';
 import ContactMenu from '../components/ContactMenu';
+import VoiceRecorder from '../components/VoiceRecorder';
+import VoicePlayer from '../components/VoicePlayer';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
-import { REACTIONS, COLORS } from '../utils/constants';
+import { REACTIONS, COLORS, MESSAGE_TYPES } from '../utils/constants';
 
 // Header icon button that works on web and native
 const HeaderIconButton = ({ onPress, style, children }) => {
@@ -887,6 +890,59 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
+  const uploadVoice = async (voiceUri, duration) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      const filename = `voice_${Date.now()}.m4a`;
+
+      formData.append('voice', {
+        uri: Platform.OS === 'ios' ? voiceUri.replace('file://', '') : voiceUri,
+        name: filename,
+        type: 'audio/m4a',
+      });
+      
+      const conversationId = conversation._id || conversation.id;
+      if (!conversationId) {
+        Alert.alert('Lỗi', 'Không tìm thấy ID cuộc trò chuyện');
+        return;
+      }
+      
+      formData.append('conversationId', conversationId);
+      formData.append('type', 'voice');
+      formData.append('duration', duration.toString());
+
+      const token = await storage.getItem('token');
+      const res = await fetch(`${BASE_URL}/api/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (res.ok) {
+        const message = await res.json();
+        if (socket) {
+          socket.emit('send-message', {
+            conversationId: conversationId,
+            senderId: user.id,
+            content: message.content,
+            type: 'voice',
+            duration: duration,
+          });
+        }
+      } else {
+        throw new Error('Voice upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading voice:', error);
+      Alert.alert('Lỗi', 'Không thể gửi tin nhắn thoại');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleEmojiSelect = (emoji) => {
     setInputMessage((prev) => prev + emoji);
   };
@@ -1059,6 +1115,7 @@ const ChatScreen = ({ route, navigation }) => {
     const senderId = item.sender?._id || item.sender?.id || item.sender;
     const isOwn = senderId === user.id;
     const isImage = item.type === 'image';
+    const isVoice = item.type === 'voice';
     const isRecalled = item.recalled;
     
     return (
@@ -1098,21 +1155,37 @@ const ChatScreen = ({ route, navigation }) => {
               })()}
             </Text>
           )}
-          {isImage ? (
+          {isRecalled ? (
+            <Text
+              style={[
+                styles.messageText,
+                isOwn ? styles.ownMessageText : styles.otherMessageText,
+                styles.recalledText,
+              ]}
+            >
+              Tin nhắn đã được thu hồi
+            </Text>
+          ) : isImage ? (
             <Image
               source={{ uri: `${BASE_URL}${item.content}` }}
               style={styles.messageImage}
               resizeMode="cover"
+            />
+          ) : isVoice ? (
+            <VoicePlayer
+              audioUri={`${BASE_URL}${item.content}`}
+              duration={item.duration || 0}
+              isOwn={isOwn}
+              onError={(error) => Alert.alert('Lỗi', error)}
             />
           ) : (
             <Text
               style={[
                 styles.messageText,
                 isOwn ? styles.ownMessageText : styles.otherMessageText,
-                isRecalled && styles.recalledText,
               ]}
             >
-              {isRecalled ? 'Tin nhắn đã được thu hồi' : item.content}
+              {item.content}
             </Text>
           )}
           <View style={styles.messageFooter}>
@@ -1399,17 +1472,19 @@ const ChatScreen = ({ route, navigation }) => {
           />
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={handleSend}
-          disabled={!inputMessage.trim()}
-        >
-          <Ionicons
-            name="send"
-            size={20}
-            color={inputMessage.trim() ? '#fff' : '#ccc'}
+        {inputMessage.trim() ? (
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={handleSend}
+          >
+            <Ionicons name="send" size={20} color="#fff" />
+          </TouchableOpacity>
+        ) : (
+          <VoiceRecorder
+            onSendVoice={uploadVoice}
+            disabled={uploading}
           />
-        </TouchableOpacity>
+        )}
       </View>
 
       <MessageMenu

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -6,17 +6,139 @@ import {
   StyleSheet,
   Animated,
   Alert,
+  Dimensions,
 } from 'react-native';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../utils/constants';
 
-const VoiceRecorder = ({ onSendVoice, disabled }) => {
+const { width } = Dimensions.get('window');
+
+const VoiceRecorder = ({ onSendVoice, onCancel, disabled }) => {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const animatedValue = useRef(new Animated.Value(1)).current;
+  const [waveformData, setWaveformData] = useState(Array(8).fill(0.2));
+  
+  // Animation values
+  const micScale = useRef(new Animated.Value(1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  const waveAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  
   const durationInterval = useRef(null);
+  const waveInterval = useRef(null);
+
+  // Auto-start recording when component mounts
+  useEffect(() => {
+    startRecording();
+  }, []);
+
+  // Animation effect when recording starts
+  useEffect(() => {
+    if (isRecording) {
+      // Slide up animation
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Continuous pulse animation for microphone
+      const pulseAnimation = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.3,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseAnimation.start();
+
+      // Waveform animation
+      const waveAnimation = Animated.loop(
+        Animated.timing(waveAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: false,
+        })
+      );
+      waveAnimation.start();
+
+      return () => {
+        pulseAnimation.stop();
+        waveAnimation.stop();
+      };
+    } else {
+      // Reset animations
+      slideAnim.setValue(0);
+      opacityAnim.setValue(0);
+      pulseAnim.setValue(1);
+      waveAnim.setValue(0);
+    }
+  }, [isRecording]);
+
+  // Generate waveform data
+  useEffect(() => {
+    if (isRecording) {
+      waveInterval.current = setInterval(() => {
+        const newWaveform = Array(8).fill(0).map(() => Math.random() * 0.8 + 0.2);
+        setWaveformData(newWaveform);
+      }, 200);
+    } else {
+      if (waveInterval.current) {
+        clearInterval(waveInterval.current);
+      }
+      setWaveformData(Array(8).fill(0.2));
+    }
+    
+    return () => {
+      if (waveInterval.current) {
+        clearInterval(waveInterval.current);
+      }
+    };
+  }, [isRecording]);
+    try {
+      console.log('🎤 Requesting recording permissions...');
+      const { status } = await Audio.requestPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Cần quyền truy cập', 'Ứng dụng cần quyền truy cập microphone để ghi âm');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      console.log('🎤 Starting recording...');
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+
+      setRecording(recording);
+      setIsRecording(true);
+      setRecordingDuration(0);
+
+      // Start duration counter
+      durationInterval.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
 
   const startRecording = async () => {
     try {
@@ -47,22 +169,6 @@ const VoiceRecorder = ({ onSendVoice, disabled }) => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
 
-      // Start pulsing animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(animatedValue, {
-            toValue: 1.2,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(animatedValue, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-
       console.log('🎤 Recording started');
     } catch (err) {
       console.error('Failed to start recording', err);
@@ -77,8 +183,6 @@ const VoiceRecorder = ({ onSendVoice, disabled }) => {
       if (!recording) return;
 
       setIsRecording(false);
-      animatedValue.stopAnimation();
-      animatedValue.setValue(1);
       
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
@@ -104,11 +208,13 @@ const VoiceRecorder = ({ onSendVoice, disabled }) => {
 
   const cancelRecording = async () => {
     try {
-      if (!recording) return;
+      if (!recording) {
+        // If not recording, just close the UI
+        onCancel?.();
+        return;
+      }
 
       setIsRecording(false);
-      animatedValue.stopAnimation();
-      animatedValue.setValue(1);
       
       if (durationInterval.current) {
         clearInterval(durationInterval.current);
@@ -118,8 +224,12 @@ const VoiceRecorder = ({ onSendVoice, disabled }) => {
       setRecording(null);
       setRecordingDuration(0);
       console.log('❌ Recording cancelled');
+      
+      // Close the voice recorder UI
+      onCancel?.();
     } catch (error) {
       console.error('Failed to cancel recording', error);
+      onCancel?.();
     }
   };
 
@@ -131,27 +241,86 @@ const VoiceRecorder = ({ onSendVoice, disabled }) => {
 
   if (isRecording) {
     return (
-      <View style={styles.recordingContainer}>
-        <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton}>
-          <Ionicons name="close" size={24} color={COLORS.DANGER} />
-        </TouchableOpacity>
+      <Animated.View 
+        style={[
+          styles.recordingFullContainer,
+          {
+            opacity: opacityAnim,
+            transform: [{
+              translateY: slideAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [100, 0],
+              })
+            }]
+          }
+        ]}
+      >
+        {/* Background overlay */}
+        <View style={styles.recordingOverlay} />
         
-        <View style={styles.recordingInfo}>
+        {/* Recording UI */}
+        <View style={styles.recordingContent}>
+          {/* Header with cancel and timer */}
+          <View style={styles.recordingHeader}>
+            <TouchableOpacity onPress={cancelRecording} style={styles.cancelButton}>
+              <Ionicons name="close" size={28} color={COLORS.DANGER} />
+              <Text style={styles.cancelText}>Hủy</Text>
+            </TouchableOpacity>
+            
+            <View style={styles.timerContainer}>
+              <View style={styles.recordingDot} />
+              <Text style={styles.timerText}>{formatDuration(recordingDuration)}</Text>
+            </View>
+
+            <TouchableOpacity onPress={stopRecording} style={styles.sendButton}>
+              <Text style={styles.sendText}>Gửi</Text>
+              <Ionicons name="send" size={28} color={COLORS.PRIMARY} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Waveform visualization */}
+          <View style={styles.waveformContainer}>
+            {waveformData.map((height, index) => (
+              <Animated.View
+                key={index}
+                style={[
+                  styles.waveformBar,
+                  {
+                    height: waveAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [4, height * 40 + 4],
+                    }),
+                    opacity: waveAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0.3, 1],
+                    }),
+                  },
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Animated microphone */}
           <Animated.View 
             style={[
-              styles.recordingIndicator,
-              { transform: [{ scale: animatedValue }] }
+              styles.micContainer,
+              {
+                transform: [{ scale: pulseAnim }],
+              },
             ]}
           >
-            <Ionicons name="mic" size={20} color={COLORS.WHITE} />
+            <View style={styles.micButton}>
+              <Ionicons name="mic" size={32} color={COLORS.WHITE} />
+            </View>
           </Animated.View>
-          <Text style={styles.durationText}>{formatDuration(recordingDuration)}</Text>
-        </View>
 
-        <TouchableOpacity onPress={stopRecording} style={styles.sendButton}>
-          <Ionicons name="send" size={24} color={COLORS.PRIMARY} />
-        </TouchableOpacity>
-      </View>
+          {/* Instructions */}
+          <Text style={styles.instructionText}>Đang ghi âm...</Text>
+          <Text style={styles.subInstructionText}>
+            Nhấn "Gửi" để gửi hoặc "Hủy" để dừng
+          </Text>
+        </View>
+      </Animated.View>
     );
   }
 
@@ -191,6 +360,128 @@ const styles = StyleSheet.create({
   micButtonDisabled: {
     backgroundColor: COLORS.BACKGROUND,
   },
+  
+  // Full-screen recording UI
+  recordingFullContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 1000,
+  },
+  recordingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+  },
+  recordingContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  recordingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 60,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  cancelText: {
+    color: COLORS.DANGER,
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  recordingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.DANGER,
+    marginRight: 8,
+  },
+  timerText: {
+    color: COLORS.WHITE,
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  sendButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+  },
+  sendText: {
+    color: COLORS.PRIMARY,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  
+  // Waveform visualization
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 60,
+    marginBottom: 40,
+  },
+  waveformBar: {
+    width: 4,
+    backgroundColor: COLORS.PRIMARY,
+    marginHorizontal: 2,
+    borderRadius: 2,
+    minHeight: 4,
+  },
+  
+  // Animated microphone
+  micContainer: {
+    marginBottom: 40,
+  },
+  micButton: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.DANGER,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: COLORS.SHADOW,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  
+  // Instructions
+  instructionText: {
+    color: COLORS.WHITE,
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  subInstructionText: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  
+  // Original small recording container (unused now)
   recordingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,31 +498,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-  },
-  cancelButton: {
-    marginRight: 12,
-  },
-  recordingInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  recordingIndicator: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.DANGER,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  durationText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
-  },
-  sendButton: {
-    marginLeft: 12,
   },
 });
 

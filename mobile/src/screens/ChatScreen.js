@@ -28,6 +28,7 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
+import { COLORS, STORAGE_KEYS } from '../utils/constants';
 import { REACTIONS, COLORS, MESSAGE_TYPES, STORAGE_KEYS } from '../utils/constants';
 
 // Header icon button that works on web and native
@@ -77,6 +78,7 @@ const ChatScreen = ({ route, navigation }) => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showChatMenu, setShowChatMenu] = useState(false);
   const [messageReactions, setMessageReactions] = useState({}); // { messageId: { reaction: [userId] } }
   const [showQuickReactions, setShowQuickReactions] = useState(false);
@@ -1308,12 +1310,13 @@ const ChatScreen = ({ route, navigation }) => {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-      keyboardVerticalOffset={90}
-    >
-      <View style={styles.messagesContainer}>
+    <View style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardContainer}
+        keyboardVerticalOffset={90}
+      >
+        <View style={styles.messagesContainer}>
         {wallpaper && (
           <Image 
             source={{ uri: wallpaper.startsWith('http') ? wallpaper : `${BASE_URL}${wallpaper}` }}
@@ -1496,10 +1499,17 @@ const ChatScreen = ({ route, navigation }) => {
             <Ionicons name="send" size={20} color="#fff" />
           </TouchableOpacity>
         ) : (
-          <VoiceRecorder
-            onSendVoice={uploadVoice}
+          <TouchableOpacity
+            onPress={() => setShowVoiceRecorder(true)}
+            style={[styles.micButton, uploading && styles.micButtonDisabled]}
             disabled={uploading}
-          />
+          >
+            <Ionicons 
+              name="mic" 
+              size={24} 
+              color={uploading ? COLORS.TEXT_SECONDARY : COLORS.PRIMARY} 
+            />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -1641,7 +1651,20 @@ const ChatScreen = ({ route, navigation }) => {
           }}
         />
       )}
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+
+      {/* Voice Recorder - Rendered outside KeyboardAvoidingView for fullscreen overlay */}
+      {showVoiceRecorder && (
+        <VoiceRecorder
+          onSendVoice={(voiceUri, duration) => {
+            uploadVoice(voiceUri, duration);
+            setShowVoiceRecorder(false);
+          }}
+          onCancel={() => setShowVoiceRecorder(false)}
+          disabled={uploading}
+        />
+      )}
+    </View>
   );
 };
 
@@ -1649,6 +1672,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#E5E5E5',
+    position: 'relative',
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   center: {
     flex: 1,
@@ -1801,6 +1828,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.WHITE,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    shadowColor: COLORS.SHADOW,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  micButtonDisabled: {
+    backgroundColor: COLORS.BACKGROUND,
   },
   typingContainer: {
     padding: 8,

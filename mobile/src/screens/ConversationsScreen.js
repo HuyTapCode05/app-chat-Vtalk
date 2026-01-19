@@ -204,23 +204,23 @@ const ConversationsScreen = ({ navigation }) => {
 
   const getConversationName = (conversation) => {
     // Nhóm: luôn dùng tên nhóm, KHÔNG BAO GIỜ dùng nickname
-    if (conversation.type === 'group') {
+    if (conversation?.type === 'group') {
       return conversation.name || 'Nhóm';
     }
 
     // Đếm số participants để phân biệt group vs private
-    const participants = conversation.participants || [];
+    const participants = conversation?.participants || [];
     const participantCount = Array.isArray(participants) ? participants.length : 0;
     
     // Nếu có nhiều hơn 2 người → coi là nhóm, dùng tên nhóm hoặc "Nhóm"
     if (participantCount > 2) {
-      return conversation.name || 'Nhóm';
+      return conversation?.name || 'Nhóm';
     }
 
     // Chỉ áp dụng nickname cho chat riêng (private hoặc 2 người)
     const otherUser = participants.find((p) => {
-      const pId = p._id || p.id || p;
-      return pId !== user.id;
+      const pId = p?._id || p?.id || p;
+      return pId !== user?.id;
     });
 
     if (!otherUser) return 'Unknown';
@@ -229,7 +229,7 @@ const ConversationsScreen = ({ navigation }) => {
     const otherUserIdStr = otherUserId ? String(otherUserId) : '';
     const nickname = otherUserIdStr ? nicknames[otherUserIdStr] : null;
 
-    return nickname || otherUser.fullName || 'Unknown';
+    return nickname || otherUser.fullName || otherUser.username || 'Unknown';
   };
 
   const getLastMessage = (conversation) => {
@@ -237,7 +237,9 @@ const ConversationsScreen = ({ navigation }) => {
     const sender = conversation.lastMessage.sender;
     const senderId = sender?._id || sender?.id || sender;
     const isOwn = senderId === user.id;
-    return `${isOwn ? 'Bạn: ' : ''}${conversation.lastMessage.content}`;
+    const content = conversation.lastMessage.content || '';
+    const result = `${isOwn ? 'Bạn: ' : ''}${content}`;
+    return result.trim() || 'Tin nhắn trống';
   };
 
   const handleSelectConversation = (conversation) => {
@@ -379,7 +381,7 @@ const ConversationsScreen = ({ navigation }) => {
             ) : (
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {getConversationName(item).charAt(0).toUpperCase()}
+                  {(getConversationName(item) || 'U').charAt(0).toUpperCase()}
                 </Text>
               </View>
             )}
@@ -390,7 +392,7 @@ const ConversationsScreen = ({ navigation }) => {
                     <Ionicons name="pin" size={16} color="#00B14F" style={{ marginRight: 4 }} />
                   )}
                   <Text style={styles.conversationName}>
-                    {getConversationName(item)}
+                    {getConversationName(item) || 'Unknown'}
                   </Text>
                   {/* Online Status */}
                   {otherUser?.isOnline && (
@@ -408,7 +410,7 @@ const ConversationsScreen = ({ navigation }) => {
               </View>
               <View style={styles.messageRow}>
                 <Text style={styles.lastMessage} numberOfLines={1}>
-                  {getLastMessage(item)}
+                  {getLastMessage(item) || 'No message'}
                 </Text>
                 {/* Unread Badge - placeholder, cần implement logic đếm */}
               </View>

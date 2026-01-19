@@ -28,8 +28,7 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
-import { COLORS, STORAGE_KEYS } from '../utils/constants';
-import { REACTIONS, COLORS, MESSAGE_TYPES, STORAGE_KEYS } from '../utils/constants';
+import { COLORS, STORAGE_KEYS, REACTIONS, MESSAGE_TYPES } from '../utils/constants';
 
 // Header icon button that works on web and native
 const HeaderIconButton = ({ onPress, style, children }) => {

@@ -20,6 +20,19 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Test backend connection on app start
+    const testBackendConnection = async () => {
+      try {
+        console.log('🔍 Testing backend connection...');
+        const res = await api.get('/health');
+        console.log('✅ Backend connected:', res.data);
+      } catch (error) {
+        console.error('❌ Backend connection failed:', error.message);
+        console.error('Backend URL:', error.config?.baseURL);
+      }
+    };
+
+    testBackendConnection();
     checkAuth().catch((error) => {
       console.error('checkAuth error:', error);
       setLoading(false);
@@ -74,6 +87,11 @@ export const AuthProvider = ({ children }) => {
   const register = useCallback(async (username, email, password, fullName) => {
     try {
       logger.info('Registering user...', { username, email });
+      console.log('📝 Register API call:', {
+        url: '/auth/register',
+        data: { username, email, password: '***', fullName }
+      });
+      
       const res = await api.post('/auth/register', {
         username,
         email,
@@ -81,6 +99,7 @@ export const AuthProvider = ({ children }) => {
         fullName,
       });
       
+      console.log('✅ Register success:', res.data);
       logger.info('Register API response:', res.data);
       
       const { token, user, requiresVerification, verificationMethod } = res.data;
@@ -95,6 +114,13 @@ export const AuthProvider = ({ children }) => {
       logger.success('User registered successfully');
       return { token, user, requiresVerification, verificationMethod };
     } catch (error) {
+      console.error('❌ Register error:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      });
+      
       logger.error('Register error:', error);
       logger.error('Error details:', {
         message: error.message,

@@ -27,9 +27,10 @@ const config = {
       process.env.FRONTEND_URL || 'http://localhost:3000',
       'http://localhost:8081',
       'http://localhost:19006',
-      'http://192.168.1.5:8081',
-      'http://192.168.1.5:19006',
-    ],
+      'http://192.168.1.3:8081',
+      'http://192.168.1.3:19006',
+      '*' // Allow all origins for development
+    , '*'],
   },
   
   // File Upload
@@ -38,7 +39,7 @@ const config = {
     allowedTypes: [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp',
       'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/m4a', 'audio/aac'
-    ],
+    , '*'],
     destination: './uploads',
   },
   

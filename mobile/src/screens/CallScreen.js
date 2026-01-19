@@ -24,7 +24,8 @@ try {
     RTCView = null;
   } else {
     // On native, try to use RTCView from react-native-webrtc
-    const webrtc = require('react-native-webrtc');
+    // const webrtc = require('react-native-webrtc'); // Temporarily disabled
+    const webrtc = null; // Disable WebRTC to avoid warnings
     RTCView = webrtc.RTCView;
   }
 } catch (e) {

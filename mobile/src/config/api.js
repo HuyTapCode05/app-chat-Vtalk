@@ -6,8 +6,19 @@ import { handleNetworkError } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
 import { API_CONFIG } from '../utils/env';
 
+// Auto-detect IP or fallback to manual IP
+const AUTO_DETECT_IP = false; // Set to true when Metro provides global IP
+const MANUAL_IP = '192.168.1.5'; // Update this if your IP changes
 
-const YOUR_COMPUTER_IP = '192.168.1.5';
+const getLocalIP = () => {
+  // For now, use manual IP. 
+  // TODO: Auto-detect from Metro when available
+  return MANUAL_IP;
+};
+
+const YOUR_COMPUTER_IP = AUTO_DETECT_IP ? getLocalIP() : MANUAL_IP;
+
+console.log('🌐 Using IP for API:', YOUR_COMPUTER_IP);
 
 const getApiUrl = () => {
   if (Platform.OS === 'web') {

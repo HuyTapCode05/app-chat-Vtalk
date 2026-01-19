@@ -28,7 +28,7 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
-import { REACTIONS, COLORS, MESSAGE_TYPES } from '../utils/constants';
+import { REACTIONS, COLORS, MESSAGE_TYPES, STORAGE_KEYS } from '../utils/constants';
 
 // Header icon button that works on web and native
 const HeaderIconButton = ({ onPress, style, children }) => {
@@ -891,6 +891,7 @@ const ChatScreen = ({ route, navigation }) => {
   };
 
   const uploadVoice = async (voiceUri, duration) => {
+    console.log('🎤 Starting voice upload:', { voiceUri, duration });
     setUploading(true);
     try {
       const formData = new FormData();
@@ -912,7 +913,14 @@ const ChatScreen = ({ route, navigation }) => {
       formData.append('type', 'voice');
       formData.append('duration', duration.toString());
 
-      const token = await storage.getItem('token');
+      console.log('📤 Uploading voice with data:', {
+        conversationId,
+        type: 'voice',
+        duration,
+        filename
+      });
+
+      const token = await storage.getItem(STORAGE_KEYS.TOKEN);
       const res = await fetch(`${BASE_URL}/api/messages`, {
         method: 'POST',
         headers: {
@@ -921,8 +929,14 @@ const ChatScreen = ({ route, navigation }) => {
         body: formData,
       });
 
+      console.log('📨 Voice upload response:', {
+        status: res.status,
+        ok: res.ok
+      });
+
       if (res.ok) {
         const message = await res.json();
+        console.log('✅ Voice upload success:', message);
         if (socket) {
           socket.emit('send-message', {
             conversationId: conversationId,
@@ -933,11 +947,13 @@ const ChatScreen = ({ route, navigation }) => {
           });
         }
       } else {
-        throw new Error('Voice upload failed');
+        const errorText = await res.text();
+        console.error('❌ Voice upload failed:', { status: res.status, error: errorText });
+        throw new Error(`Voice upload failed: ${res.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error uploading voice:', error);
-      Alert.alert('Lỗi', 'Không thể gửi tin nhắn thoại');
+      Alert.alert('Lỗi', `Không thể gửi tin nhắn thoại: ${error.message}`);
     } finally {
       setUploading(false);
     }

@@ -29,8 +29,10 @@ const canUseNativeWebRTC = () => {
   
   // Try to check if react-native-webrtc is available
   try {
-    require.resolve('react-native-webrtc');
-    return true;
+    // Temporarily disable to avoid import warnings
+    // require.resolve('react-native-webrtc');
+    // return true;
+    return false; // Disable WebRTC for now
   } catch (e) {
     return false;
   }

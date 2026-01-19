@@ -40,7 +40,7 @@ const { apiLimiter, sanitizeInput, hideSensitiveHeaders } = require('./middlewar
 app.use(hideSensitiveHeaders);
 app.use(sanitizeInput);
 app.use(cors({
-  origin: config.cors.origins,
+  origin: true, // Allow all origins for development debugging
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));

@@ -112,33 +112,6 @@ const VoiceRecorder = ({ onSendVoice, onCancel, disabled }) => {
       }
     };
   }, [isRecording]);
-    try {
-      console.log('🎤 Requesting recording permissions...');
-      const { status } = await Audio.requestPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Cần quyền truy cập', 'Ứng dụng cần quyền truy cập microphone để ghi âm');
-        return;
-      }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      console.log('🎤 Starting recording...');
-      const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      setRecording(recording);
-      setIsRecording(true);
-      setRecordingDuration(0);
-
-      // Start duration counter
-      durationInterval.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
 
   const startRecording = async () => {
     try {

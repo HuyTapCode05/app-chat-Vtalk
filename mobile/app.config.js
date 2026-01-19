@@ -37,11 +37,8 @@ module.exports = {
       "expo-asset",
       "expo-audio",
       "expo-dev-client"
-    ],
-    extra: {
-      eas: {
-        projectId: "12345678-1234-1234-1234-123456789012"
-      }
-    }
+    ]
+    // Removed extra.eas.projectId to avoid notification UUID error
+    // Add back when using EAS services
   }
 };

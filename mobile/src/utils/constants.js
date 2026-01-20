@@ -35,6 +35,7 @@ export const CONVERSATION_TYPES = {
 export const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 // UI Constants / Design System
+// Note: These are fallback colors. Use theme colors from ThemeContext when possible
 export const COLORS = {
   PRIMARY: '#00B14F',
   PRIMARY_DARK: '#008037',
@@ -53,6 +54,18 @@ export const COLORS = {
   BORDER: '#E5E7EB',
   SHADOW: 'rgba(15, 23, 42, 0.08)',
   CLOSE_FRIEND: '#FFD700',
+  
+  // Theme-aware colors helper (use these with theme context)
+  getThemeColors: (theme) => ({
+    primary: theme.primary,
+    background: theme.background,
+    surface: theme.surface,
+    text: theme.text,
+    textSecondary: theme.textSecondary,
+    border: theme.border,
+    messageOwn: theme.messageOwn,
+    messageOther: theme.messageOther,
+  }),
 };
 
 export const RADIUS = {

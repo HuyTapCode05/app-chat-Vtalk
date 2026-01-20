@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
 import { getUserId, getConversationId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
@@ -24,6 +25,7 @@ import notificationService from '../utils/notificationService';
 const ConversationsScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const socket = useSocket(); // Can be null
+  const { theme } = useTheme();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -265,23 +267,23 @@ const ConversationsScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00B14F" />
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
+        <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme.text }]}
           placeholder="Tìm kiếm cuộc trò chuyện..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.placeholder}
           autoCapitalize="none"
         />
         {searchQuery.length > 0 && (
@@ -289,7 +291,7 @@ const ConversationsScreen = ({ navigation }) => {
             onPress={() => setSearchQuery('')}
             style={styles.clearButton}
           >
-            <Ionicons name="close-circle" size={20} color="#999" />
+            <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -306,7 +308,7 @@ const ConversationsScreen = ({ navigation }) => {
           
           return (
           <TouchableOpacity
-            style={styles.conversationItem}
+            style={[styles.conversationItem, { backgroundColor: theme.card }]}
             onPress={() => handleSelectConversation(item)}
             onLongPress={() => {
               const conversationId = item._id || item.id;
@@ -379,8 +381,8 @@ const ConversationsScreen = ({ navigation }) => {
                 style={styles.avatarImage}
               />
             ) : (
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
+              <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+                <Text style={[styles.avatarText, { color: '#FFFFFF' }]}>
                   {(getConversationName(item) || 'U').charAt(0).toUpperCase()}
                 </Text>
               </View>
@@ -389,9 +391,9 @@ const ConversationsScreen = ({ navigation }) => {
               <View style={styles.conversationHeader}>
                 <View style={styles.nameContainer}>
                   {pinnedConversations.includes(item._id || item.id) && (
-                    <Ionicons name="pin" size={16} color="#00B14F" style={{ marginRight: 4 }} />
+                    <Ionicons name="pin" size={16} color={theme.primary} style={{ marginRight: 4 }} />
                   )}
-                  <Text style={styles.conversationName}>
+                  <Text style={[styles.conversationName, { color: theme.text }]}>
                     {getConversationName(item) || 'Unknown'}
                   </Text>
                   {/* Online Status */}
@@ -400,7 +402,7 @@ const ConversationsScreen = ({ navigation }) => {
                   )}
                 </View>
                 {item.lastMessageAt && (
-                  <Text style={styles.time}>
+                  <Text style={[styles.time, { color: theme.textSecondary }]}>
                     {new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
                       hour: '2-digit',
                       minute: '2-digit',
@@ -409,7 +411,7 @@ const ConversationsScreen = ({ navigation }) => {
                 )}
               </View>
               <View style={styles.messageRow}>
-                <Text style={styles.lastMessage} numberOfLines={1}>
+                <Text style={[styles.lastMessage, { color: theme.textSecondary }]} numberOfLines={1}>
                   {getLastMessage(item) || 'No message'}
                 </Text>
                 {/* Unread Badge - placeholder, cần implement logic đếm */}
@@ -440,7 +442,7 @@ const ConversationsScreen = ({ navigation }) => {
                     });
                   }}
                 >
-                  <Ionicons name="call" size={20} color="#00B14F" />
+                  <Ionicons name="call" size={20} color={theme.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.callButton}
@@ -464,7 +466,7 @@ const ConversationsScreen = ({ navigation }) => {
                     });
                   }}
                 >
-                  <Ionicons name="videocam" size={20} color="#00B14F" />
+                    <Ionicons name="videocam" size={20} color={theme.primary} />
                 </TouchableOpacity>
               </View>
             )}
@@ -501,7 +503,6 @@ const ConversationsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
   },
   center: {
     flex: 1,
@@ -514,7 +515,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: COLORS.CARD_BACKGROUND,
     borderBottomWidth: 0,
     shadowColor: SHADOWS.CARD.shadowColor,
     shadowOffset: SHADOWS.CARD.shadowOffset,
@@ -525,13 +525,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.CARD_BACKGROUND,
     borderRadius: RADIUS.LG,
     marginHorizontal: 16,
     marginVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: COLORS.BORDER,
     shadowColor: SHADOWS.CARD.shadowColor,
     shadowOffset: SHADOWS.CARD.shadowOffset,
     shadowOpacity: SHADOWS.CARD.shadowOpacity,
@@ -545,7 +543,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingVertical: 10,
-    color: COLORS.TEXT_PRIMARY,
   },
   clearButton: {
     padding: 4,
@@ -553,7 +550,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: COLORS.TEXT_PRIMARY,
   },
   headerActions: {
     flexDirection: 'row',
@@ -568,7 +564,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginVertical: 6,
     borderRadius: RADIUS.LG,
-    backgroundColor: COLORS.CARD_BACKGROUND,
     alignItems: 'center',
     shadowColor: SHADOWS.CARD.shadowColor,
     shadowOffset: SHADOWS.CARD.shadowOffset,
@@ -590,7 +585,6 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: COLORS.PRIMARY,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -602,7 +596,6 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   avatarText: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
   },
@@ -621,7 +614,6 @@ const styles = StyleSheet.create({
   conversationName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
     marginRight: 6,
   },
   onlineIndicator: {
@@ -637,11 +629,9 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 12,
-    color: COLORS.TEXT_TERTIARY,
   },
   lastMessage: {
     fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
   },
   empty: {
     flex: 1,
@@ -651,12 +641,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: '#999',
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#ccc',
   },
 });
 

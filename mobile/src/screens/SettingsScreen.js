@@ -8,23 +8,49 @@ import {
   Switch,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const SettingsScreen = ({ navigation }) => {
+  const { theme, isDarkMode, toggleTheme } = useTheme();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      {/* Theme Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Thông báo</Text>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Giao diện</Text>
         
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
           <View style={styles.settingInfo}>
-            <Ionicons name="notifications-outline" size={24} color="#00B14F" />
+            <Ionicons name={isDarkMode ? "moon" : "sunny"} size={24} color={theme.primary} />
             <View style={styles.settingText}>
-              <Text style={styles.settingLabel}>Bật thông báo</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingLabel, { color: theme.text }]}>Chế độ tối</Text>
+              <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
+                {isDarkMode ? 'Đang sử dụng giao diện tối' : 'Đang sử dụng giao diện sáng'}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={isDarkMode}
+            onValueChange={toggleTheme}
+            trackColor={{ false: theme.border, true: theme.primary }}
+            thumbColor={isDarkMode ? '#fff' : '#f4f3f4'}
+          />
+        </View>
+      </View>
+
+      {/* Notifications Section */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Thông báo</Text>
+        
+        <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
+          <View style={styles.settingInfo}>
+            <Ionicons name="notifications-outline" size={24} color={theme.primary} />
+            <View style={styles.settingText}>
+              <Text style={[styles.settingLabel, { color: theme.text }]}>Bật thông báo</Text>
+              <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
                 Nhận thông báo khi có tin nhắn mới
               </Text>
             </View>
@@ -32,16 +58,17 @@ const SettingsScreen = ({ navigation }) => {
           <Switch
             value={notificationsEnabled}
             onValueChange={setNotificationsEnabled}
-            trackColor={{ false: '#ccc', true: '#00B14F' }}
+            trackColor={{ false: theme.border, true: theme.primary }}
+            thumbColor={notificationsEnabled ? '#fff' : '#f4f3f4'}
           />
         </View>
 
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
           <View style={styles.settingInfo}>
-            <Ionicons name="volume-high-outline" size={24} color="#00B14F" />
+            <Ionicons name="volume-high-outline" size={24} color={theme.primary} />
             <View style={styles.settingText}>
-              <Text style={styles.settingLabel}>Âm thanh</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingLabel, { color: theme.text }]}>Âm thanh</Text>
+              <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
                 Phát âm thanh khi có thông báo
               </Text>
             </View>
@@ -49,16 +76,17 @@ const SettingsScreen = ({ navigation }) => {
           <Switch
             value={soundEnabled}
             onValueChange={setSoundEnabled}
-            trackColor={{ false: '#ccc', true: '#00B14F' }}
+            trackColor={{ false: theme.border, true: theme.primary }}
+            thumbColor={soundEnabled ? '#fff' : '#f4f3f4'}
           />
         </View>
 
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { borderBottomColor: theme.border }]}>
           <View style={styles.settingInfo}>
-            <Ionicons name="phone-portrait-outline" size={24} color="#00B14F" />
+            <Ionicons name="phone-portrait-outline" size={24} color={theme.primary} />
             <View style={styles.settingText}>
-              <Text style={styles.settingLabel}>Rung</Text>
-              <Text style={styles.settingDescription}>
+              <Text style={[styles.settingLabel, { color: theme.text }]}>Rung</Text>
+              <Text style={[styles.settingDescription, { color: theme.textSecondary }]}>
                 Rung khi có thông báo
               </Text>
             </View>
@@ -66,7 +94,8 @@ const SettingsScreen = ({ navigation }) => {
           <Switch
             value={vibrationEnabled}
             onValueChange={setVibrationEnabled}
-            trackColor={{ false: '#ccc', true: '#00B14F' }}
+            trackColor={{ false: theme.border, true: theme.primary }}
+            thumbColor={vibrationEnabled ? '#fff' : '#f4f3f4'}
           />
         </View>
       </View>
@@ -77,7 +106,6 @@ const SettingsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   section: {
     padding: 16,
@@ -85,7 +113,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   settingItem: {
@@ -94,7 +121,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   settingInfo: {
     flexDirection: 'row',

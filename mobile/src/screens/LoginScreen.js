@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { handleApiError } from '../utils/errorHandler';
 import { validateEmail, validatePassword } from '../utils/validation';
 import { COLORS, SHADOWS, RADIUS } from '../utils/constants';
@@ -26,6 +27,7 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { theme } = useTheme();
 
   const handleLogin = useCallback(async () => {
     // Validate email
@@ -59,21 +61,21 @@ const LoginScreen = ({ navigation }) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: theme.background }]}
     >
       <LinearGradient
-        colors={[COLORS.PRIMARY, COLORS.PRIMARY_DARK]}
+        colors={[theme.primary, theme.primaryDark || theme.primary]}
         style={styles.gradient}
       >
         <View style={styles.content}>
-          <Text style={styles.title}>VTalk</Text>
-          <Text style={styles.subtitle}>Kết nối gia đình & bạn bè</Text>
+          <Text style={[styles.title, { color: '#FFFFFF' }]}>VTalk</Text>
+          <Text style={[styles.subtitle, { color: 'rgba(255, 255, 255, 0.9)' }]}>Kết nối gia đình & bạn bè</Text>
 
           <View style={styles.form}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.inputText, borderColor: theme.inputBorder }]}
               placeholder="Email"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.placeholder}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -81,16 +83,16 @@ const LoginScreen = ({ navigation }) => {
             />
 
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: theme.inputBackground, color: theme.inputText, borderColor: theme.inputBorder }]}
               placeholder="Mật khẩu"
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.placeholder}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
             />
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, loading && styles.buttonDisabled, { backgroundColor: theme.primary }]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -105,7 +107,7 @@ const LoginScreen = ({ navigation }) => {
               onPress={() => navigation.navigate('Register')}
               style={styles.linkButton}
             >
-              <Text style={styles.linkText}>
+              <Text style={[styles.linkText, { color: 'rgba(255, 255, 255, 0.9)' }]}>
                 Chưa có tài khoản? Đăng ký ngay
               </Text>
             </TouchableOpacity>
@@ -133,13 +135,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 44,
     fontWeight: '800',
-    color: COLORS.WHITE,
     marginBottom: 8,
     letterSpacing: 1,
   },
   subtitle: {
     fontSize: 18,
-    color: COLORS.WHITE,
     opacity: 0.9,
     marginBottom: 40,
   },
@@ -148,12 +148,10 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   input: {
-    backgroundColor: COLORS.WHITE,
     borderRadius: RADIUS.LG,
     padding: 16,
     fontSize: 16,
     marginBottom: 16,
-    color: COLORS.TEXT_PRIMARY,
     shadowColor: SHADOWS.CARD.shadowColor,
     shadowOffset: SHADOWS.CARD.shadowOffset,
     shadowOpacity: SHADOWS.CARD.shadowOpacity,
@@ -161,7 +159,6 @@ const styles = StyleSheet.create({
     elevation: SHADOWS.CARD.elevation,
   },
   button: {
-    backgroundColor: COLORS.WHITE,
     borderRadius: RADIUS.LG,
     padding: 16,
     alignItems: 'center',
@@ -176,7 +173,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   buttonText: {
-    color: '#00B14F',
+    color: '#FFFFFF',
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -185,7 +182,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   linkText: {
-    color: '#fff',
     fontSize: 16,
     textDecorationLine: 'underline',
   },

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { SocketProvider } from './src/context/SocketContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
@@ -161,6 +162,8 @@ const Tab = createBottomTabNavigator();
 
 // Bottom Tab Navigator - Main Navigation (like Zalo)
 function MainTabsNavigator() {
+  const { theme } = useTheme();
+  
   return (
     <Tab.Navigator
       screenOptions={({ route, navigation }) => ({
@@ -179,12 +182,12 @@ function MainTabsNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: COLORS.PRIMARY,
-        tabBarInactiveTintColor: COLORS.TEXT_TERTIARY,
+        tabBarActiveTintColor: theme.tabBarActive,
+        tabBarInactiveTintColor: theme.tabBarInactive,
         tabBarStyle: {
-          backgroundColor: COLORS.CARD_BACKGROUND,
+          backgroundColor: theme.tabBarBackground,
           borderTopWidth: 1,
-          borderTopColor: COLORS.BORDER,
+          borderTopColor: theme.border,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
@@ -194,9 +197,9 @@ function MainTabsNavigator() {
           fontWeight: '500',
         },
         headerStyle: {
-          backgroundColor: COLORS.PRIMARY,
+          backgroundColor: theme.headerBackground,
         },
-        headerTintColor: '#fff',
+        headerTintColor: theme.headerText,
         headerTitleStyle: {
           fontWeight: 'bold',
         },
@@ -229,6 +232,7 @@ function MainTabsNavigator() {
 
 function AppNavigator() {
   const { user, loading } = useAuth();
+  const { theme } = useTheme();
 
   // Initialize notifications when user is logged in
   useEffect(() => {
@@ -243,8 +247,8 @@ function AppNavigator() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f5f5f5' }}>
-        <Text>Đang tải...</Text>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
+        <Text style={{ color: theme.text }}>Đang tải...</Text>
       </View>
     );
   }
@@ -255,9 +259,9 @@ function AppNavigator() {
       <Stack.Navigator
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#00B14F',
+            backgroundColor: theme.headerBackground,
           },
-          headerTintColor: '#fff',
+          headerTintColor: theme.headerText,
           headerTitleStyle: {
             fontWeight: 'bold',
           },
@@ -366,12 +370,13 @@ function AppNavigator() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <SocketProvider>
-          <StatusBar style="light" />
-          <AppNavigator />
-        </SocketProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <SocketProvider>
+            <AppNavigator />
+          </SocketProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

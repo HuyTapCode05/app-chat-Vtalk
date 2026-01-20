@@ -1,500 +1,229 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
+  Alert,
   RefreshControl,
   TextInput,
-  Image,
-  Alert,
+  Image
 } from 'react-native';
-import { useAuth } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
-import { useTheme } from '../context/ThemeContext';
-import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
-import { getUserId, getConversationId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
-import { COLORS, SHADOWS, RADIUS } from '../utils/constants';
-import { handleApiError } from '../utils/errorHandler';
-import notificationService from '../utils/notificationService';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import api from '../config/api';
+import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
+import { useSocket } from '../context/SocketContext';
+import EmptyState from '../components/EmptyState';
 
-const ConversationsScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
-  const socket = useSocket(); // Can be null
+const BASE_URL = 'http://192.168.1.5:5000';
+
+const ConversationsScreen = () => {
+  const { user } = useAuth();
   const { theme } = useTheme();
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
+  const navigation = useNavigation();
+  
   const [conversations, setConversations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [nicknames, setNicknames] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [pinnedConversations, setPinnedConversations] = useState([]);
   const [archivedConversations, setArchivedConversations] = useState([]);
-  const [showArchived, setShowArchived] = useState(false);
-  const [nicknames, setNicknames] = useState({});
 
-  useEffect(() => {
-    loadConversations();
-    loadPinnedAndArchived();
-    loadNicknames();
-  }, []);
-
-  // Refresh when screen comes into focus (e.g., after deleting conversation)
-  useFocusEffect(
-    useCallback(() => {
-      console.log('🔄 ConversationsScreen focused, refreshing...');
-      loadConversations();
-      loadNicknames();
-    }, [])
-  );
-
-  const loadPinnedAndArchived = async () => {
-    try {
-      // Initialize empty arrays - pin/archive status will be checked when needed
-      setPinnedConversations([]);
-      setArchivedConversations([]);
-    } catch (error) {
-      console.error('Error loading pinned/archived:', error);
-    }
-  };
-
-  const loadNicknames = async () => {
-    try {
-      const res = await api.get('/nicknames');
-      const nicknameMap = {};
-      (res.data || []).forEach(nick => {
-        if (nick.targetUserId) {
-          const normalizedId = String(nick.targetUserId);
-          nicknameMap[normalizedId] = nick.nickname;
-        }
-      });
-      setNicknames(nicknameMap);
-    } catch (error) {
-      console.error('Error loading nicknames in ConversationsScreen:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (socket) {
-      setupSocketListeners();
-    }
-  }, [socket]);
-
-  const setupSocketListeners = () => {
-    if (!socket) return;
+  const getDisplayName = (conversation) => {
+    if (!conversation) return 'Unknown';
     
-    const handleConversationUpdated = (data) => {
-      console.log('📬 Conversation updated:', data);
-      if (data.lastMessage) {
-        updateConversationList(data.lastMessage);
-      }
-    };
+    const otherUser = conversation.participants?.find(p => {
+      const pId = p._id || p.id || p;
+      return pId !== user?.id;
+    });
 
-    const handleNewMessage = async (message) => {
-      console.log('📨 New message in ConversationsScreen:', message._id);
-      
-      // Update conversation list when new message arrives
-      updateConversationList(message);
-      
-      // Show notification if app is not focused on this conversation
-      const conversationId = message.conversation?._id || message.conversation?.id || message.conversation;
-      const senderId = message.sender?._id || message.sender?.id || message.sender;
-      
-      // Don't show notification if message is from current user
-      if (senderId === user?.id) {
-        return;
-      }
-      
-      if (conversationId && user?.id) {
-        // Check if we're currently viewing this conversation
-        // Get current route from navigation state
-        const navigationState = navigation.getState();
-        const currentRoute = navigationState?.routes?.[navigationState.index];
-        const isViewingConversation = currentRoute?.name === 'Chat' && (
-          currentRoute?.params?.conversation?._id === conversationId || 
-          currentRoute?.params?.conversation?.id === conversationId ||
-          currentRoute?.params?.conversationId === conversationId
-        );
-        
-        console.log('🔔 Notification check:', {
-          conversationId,
-          currentRoute: currentRoute?.name,
-          isViewingConversation,
-          senderId,
-          currentUserId: user.id
-        });
-        
-        // Only show notification if not viewing this conversation
-        if (!isViewingConversation) {
-          console.log('🔔 Showing notification for message:', message._id);
-          // Get conversation details
-          try {
-            const convRes = await api.get(`/conversations/${conversationId}`);
-            const conversation = convRes.data;
-            await notificationService.showMessageNotification(message, conversation, user.id);
-            console.log('✅ Notification shown successfully');
-          } catch (error) {
-            console.error('Error getting conversation for notification:', error);
-            // Still show notification with basic info
-            await notificationService.showMessageNotification(message, { _id: conversationId }, user.id);
-          }
-        } else {
-          console.log('🔕 Skipping notification - user is viewing this conversation');
-        }
-      }
-    };
+    if (!otherUser) return 'Unknown';
+
+    const userId = otherUser._id || otherUser.id || otherUser;
+    const nickname = nicknames[userId];
     
-    socket.on('conversation-updated', handleConversationUpdated);
-    socket.on('new-message', handleNewMessage);
-
-    return () => {
-      if (socket) {
-        socket.off('conversation-updated', handleConversationUpdated);
-        socket.off('new-message', handleNewMessage);
-      }
-    };
+    if (nickname) return nickname;
+    if (otherUser.fullName) return otherUser.fullName;
+    if (otherUser.username) return otherUser.username;
+    return 'Unknown User';
   };
+
+  const formatLastMessage = (message) => {
+    if (!message) return 'Chưa có tin nhắn';
+    
+    if (message.type === 'voice') {
+      return '🎤 Tin nhắn thoại';
+    } else if (message.type === 'image') {
+      return '📷 Hình ảnh';
+    } else if (message.recalled) {
+      return 'Tin nhắn đã được thu hồi';
+    } else {
+      return message.content || 'Tin nhắn';
+    }
+  };
+
+  // Filter conversations based on search
+  const filteredConversations = conversations.filter(conversation => {
+    const displayName = getDisplayName(conversation);
+    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const loadConversations = async () => {
     try {
-      // Chỉ load private conversations (tin nhắn riêng), không load groups
+      console.log('🔄 Loading conversations...');
       const res = await api.get('/conversations?type=private');
+      console.log('✅ Conversations loaded:', res.data.length);
       setConversations(res.data);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      console.error('❌ Error loading conversations:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
-  const updateConversationList = (message) => {
-    // Handle both string and object conversation IDs
-    const messageConvId = typeof message.conversation === 'string' 
-      ? message.conversation 
-      : (message.conversation?._id || message.conversation?.id || message.conversation);
-    
-    if (!messageConvId) {
-      console.log('⚠️ Cannot update conversation list: missing conversation ID');
-      return;
+  const loadNicknames = async () => {
+    try {
+      console.log('🔄 Loading nicknames...');
+      const res = await api.get('/nicknames');
+      console.log('✅ Nicknames loaded:', Object.keys(res.data).length);
+      setNicknames(res.data);
+    } catch (error) {
+      console.error('❌ Error loading nicknames:', error);
     }
-    
-    setConversations((prev) => {
-      const updated = prev.map((conv) => {
-        const convId = conv._id || conv.id;
-        if (convId && messageConvId.toString() === convId.toString()) {
-          return { ...conv, lastMessage: message, lastMessageAt: message.createdAt };
-        }
-        return conv;
-      });
-      
-      // Move updated conversation to top
-      const index = updated.findIndex(c => {
-        const cId = c._id || c.id;
-        return cId && messageConvId.toString() === cId.toString();
-      });
-      if (index > 0) {
-        const [moved] = updated.splice(index, 1);
-        updated.unshift(moved);
-      }
-      
-      return updated;
-    });
   };
 
-  const getConversationName = (conversation) => {
-    // Nhóm: luôn dùng tên nhóm, KHÔNG BAO GIỜ dùng nickname
-    if (conversation?.type === 'group') {
-      return conversation.name || 'Nhóm';
-    }
-
-    // Đếm số participants để phân biệt group vs private
-    const participants = conversation?.participants || [];
-    const participantCount = Array.isArray(participants) ? participants.length : 0;
-    
-    // Nếu có nhiều hơn 2 người → coi là nhóm, dùng tên nhóm hoặc "Nhóm"
-    if (participantCount > 2) {
-      return conversation?.name || 'Nhóm';
-    }
-
-    // Chỉ áp dụng nickname cho chat riêng (private hoặc 2 người)
-    const otherUser = participants.find((p) => {
-      const pId = p?._id || p?.id || p;
-      return pId !== user?.id;
-    });
-
-    if (!otherUser) return 'Unknown';
-
-    const otherUserId = otherUser._id || otherUser.id || otherUser;
-    const otherUserIdStr = otherUserId ? String(otherUserId) : '';
-    const nickname = otherUserIdStr ? nicknames[otherUserIdStr] : null;
-
-    return nickname || otherUser.fullName || otherUser.username || 'Unknown';
-  };
-
-  const getLastMessage = (conversation) => {
-    if (!conversation.lastMessage) return 'Chưa có tin nhắn';
-    const sender = conversation.lastMessage.sender;
-    const senderId = sender?._id || sender?.id || sender;
-    const isOwn = senderId === user.id;
-    const content = conversation.lastMessage.content || '';
-    const result = `${isOwn ? 'Bạn: ' : ''}${content}`;
-    return result.trim() || 'Tin nhắn trống';
+  const handleRefresh = () => {
+    setRefreshing(true);
+    loadConversations();
+    loadNicknames();
   };
 
   const handleSelectConversation = (conversation) => {
+    const conversationId = conversation._id || conversation.id;
+    
     navigation.navigate('Chat', {
-      conversation,
-      conversationName: getConversationName(conversation),
+      conversationId: conversationId,
+      conversation: conversation,
     });
   };
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadConversations();
-  };
+  // Focus effect to reload when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🔄 ConversationsScreen focused, refreshing...');
+      loadConversations();
+      loadNicknames();
+    }, [])
+  );
 
-  // Filter conversations by search query
-  const filteredConversations = conversations.filter((conv) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    const name = getConversationName(conv).toLowerCase();
-    const lastMsg = getLastMessage(conv).toLowerCase();
-    return name.includes(query) || lastMsg.includes(query);
-  });
+  const renderConversationItem = ({ item }) => {
+    console.log('🎨 Rendering conversation item:', {
+      id: item._id || item.id,
+      hasParticipants: !!item.participants,
+      participantsCount: item.participants?.length || 0
+    });
+
+    const displayName = getDisplayName(item);
+    const conversationId = item._id || item.id;
+    
+    return (
+      <TouchableOpacity
+        style={[styles.conversationItem, { backgroundColor: theme.card }]}
+        onPress={() => handleSelectConversation(item)}
+      >
+        {/* Avatar */}
+        <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+          <Text style={[styles.avatarText, { color: '#FFFFFF' }]}>
+            {String(displayName).charAt(0).toUpperCase()}
+          </Text>
+        </View>
+
+        {/* Content */}
+        <View style={styles.conversationInfo}>
+          <View style={styles.conversationHeader}>
+            <Text 
+              style={[styles.conversationName, { color: theme.text }]} 
+              numberOfLines={1}
+            >
+              {String(displayName)}
+            </Text>
+            <Text style={[styles.time, { color: theme.textSecondary }]}>
+              {item.lastMessageAt ? new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }) : ''}
+            </Text>
+          </View>
+          
+          <Text 
+            style={[styles.lastMessage, { color: theme.textSecondary }]}
+            numberOfLines={1}
+          >
+            {formatLastMessage(item.lastMessage)}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.center}>
+          <Text style={{ color: theme.text }}>Đang tải...</Text>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>
-        <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
-        <TextInput
-          style={[styles.searchInput, { color: theme.text }]}
-          placeholder="Tìm kiếm cuộc trò chuyện..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={theme.placeholder}
-          autoCapitalize="none"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setSearchQuery('')}
-            style={styles.clearButton}
-          >
-            <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
-          </TouchableOpacity>
-        )}
+      {/* Search Header */}
+      <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: theme.background }]}>
+          <Ionicons name="search" size={20} color={theme.textSecondary} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Tìm kiếm cuộc trò chuyện..."
+            placeholderTextColor={theme.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
       </View>
 
+      {/* Conversations List */}
       <FlatList
         data={filteredConversations}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item }) => {
-          const otherUser = item.participants?.find(p => {
-            const pId = p._id || p.id || p;
-            return pId !== user.id;
-          });
-          const otherUserId = otherUser?._id || otherUser?.id || otherUser;
-          
-          return (
-          <TouchableOpacity
-            style={[styles.conversationItem, { backgroundColor: theme.card }]}
-            onPress={() => handleSelectConversation(item)}
-            onLongPress={() => {
-              const conversationId = item._id || item.id;
-              const isPinned = pinnedConversations.includes(conversationId);
-              const isArchived = archivedConversations.includes(conversationId);
-              
-              Alert.alert(
-                'Tùy chọn',
-                '',
-                [
-                  { text: 'Hủy', style: 'cancel' },
-                  {
-                    text: isPinned ? 'Bỏ ghim' : 'Ghim',
-                    onPress: async () => {
-                      try {
-                        if (isPinned) {
-                          await api.delete(`/conversations/${conversationId}/pin`);
-                          setPinnedConversations(prev => prev.filter(id => id !== conversationId));
-                        } else {
-                          await api.post(`/conversations/${conversationId}/pin`);
-                          setPinnedConversations(prev => [...prev, conversationId]);
-                        }
-                        Alert.alert('Thành công', isPinned ? 'Đã bỏ ghim' : 'Đã ghim');
-                      } catch (error) {
-                        console.error('Error pinning/unpinning:', error);
-                        Alert.alert('Lỗi', 'Không thể thực hiện');
-                      }
-                    },
-                  },
-                  {
-                    text: isArchived ? 'Bỏ lưu trữ' : 'Lưu trữ',
-                    onPress: async () => {
-                      try {
-                        if (isArchived) {
-                          await api.delete(`/conversations/${conversationId}/archive`);
-                          setArchivedConversations(prev => prev.filter(id => id !== conversationId));
-                        } else {
-                          await api.post(`/conversations/${conversationId}/archive`);
-                          setArchivedConversations(prev => [...prev, conversationId]);
-                        }
-                        Alert.alert('Thành công', isArchived ? 'Đã bỏ lưu trữ' : 'Đã lưu trữ');
-                        loadConversations();
-                      } catch (error) {
-                        console.error('Error archiving/unarchiving:', error);
-                        Alert.alert('Lỗi', 'Không thể thực hiện');
-                      }
-                    },
-                  },
-                  {
-                    text: 'Xóa',
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await api.delete(`/conversations/${conversationId}`);
-                        setConversations(prev => prev.filter(c => (c._id || c.id) !== conversationId));
-                        Alert.alert('Thành công', 'Đã xóa trò chuyện');
-                      } catch (error) {
-                        console.error('Error deleting conversation:', error);
-                        Alert.alert('Lỗi', 'Không thể xóa trò chuyện');
-                      }
-                    },
-                  },
-                ]
-              );
-            }}
-          >
-            {otherUser?.avatar ? (
-              <Image 
-                source={{ uri: otherUser.avatar.startsWith('http') ? otherUser.avatar : `${BASE_URL}${otherUser.avatar}` }}
-                style={styles.avatarImage}
-              />
-            ) : (
-              <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-                <Text style={[styles.avatarText, { color: '#FFFFFF' }]}>
-                  {(getConversationName(item) || 'U').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
-            <View style={styles.conversationInfo}>
-              <View style={styles.conversationHeader}>
-                <View style={styles.nameContainer}>
-                  {pinnedConversations.includes(item._id || item.id) && (
-                    <Ionicons name="pin" size={16} color={theme.primary} style={{ marginRight: 4 }} />
-                  )}
-                  <Text style={[styles.conversationName, { color: theme.text }]}>
-                    {getConversationName(item) || 'Unknown'}
-                  </Text>
-                  {/* Online Status */}
-                  {otherUser?.isOnline && (
-                    <View style={styles.onlineIndicator} />
-                  )}
-                </View>
-                {item.lastMessageAt && (
-                  <Text style={[styles.time, { color: theme.textSecondary }]}>
-                    {new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.messageRow}>
-                <Text style={[styles.lastMessage, { color: theme.textSecondary }]} numberOfLines={1}>
-                  {getLastMessage(item) || 'No message'}
-                </Text>
-                {/* Unread Badge - placeholder, cần implement logic đếm */}
-              </View>
-            </View>
-            {/* Call buttons for private conversations */}
-            {item.type === 'private' && otherUserId && socket && (
-              <View style={styles.callButtons}>
-                <TouchableOpacity
-                  style={styles.callButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    if (!user?.id) return;
-                    const callId = `call_${Date.now()}_${user.id}_${otherUserId}`;
-                    socket.emit('call-request', {
-                      callId,
-                      fromUserId: user.id,
-                      toUserId: otherUserId,
-                      callType: 'voice'
-                    });
-                    navigation.navigate('Call', {
-                      callType: 'voice',
-                      userId: otherUserId,
-                      userName: otherUser?.fullName || getConversationName(item),
-                      userAvatar: otherUser?.avatar,
-                      callId,
-                      isIncoming: false,
-                    });
-                  }}
-                >
-                  <Ionicons name="call" size={20} color={theme.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.callButton}
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    if (!user?.id) return;
-                    const callId = `call_${Date.now()}_${user.id}_${otherUserId}`;
-                    socket.emit('call-request', {
-                      callId,
-                      fromUserId: user.id,
-                      toUserId: otherUserId,
-                      callType: 'video'
-                    });
-                    navigation.navigate('Call', {
-                      callType: 'video',
-                      userId: otherUserId,
-                      userName: otherUser?.fullName || getConversationName(item),
-                      userAvatar: otherUser?.avatar,
-                      callId,
-                      isIncoming: false,
-                    });
-                  }}
-                >
-                    <Ionicons name="videocam" size={20} color={theme.primary} />
-                </TouchableOpacity>
-              </View>
-            )}
-          </TouchableOpacity>
-          );
-        }}
+        keyExtractor={(item) => String(item._id || item.id || Math.random())}
+        renderItem={renderConversationItem}
+        ItemSeparatorComponent={() => (
+          <View style={[styles.separator, { backgroundColor: theme.border }]} />
+        )}
         ListEmptyComponent={
-          <View style={styles.empty}>
-            {searchQuery ? (
-              <>
-                <Text style={styles.emptyText}>Không tìm thấy kết quả</Text>
-                <Text style={styles.emptySubtext}>
-                  Thử tìm kiếm với từ khóa khác
-                </Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.emptyText}>Chưa có cuộc trò chuyện nào</Text>
-                <Text style={styles.emptySubtext}>
-                  Bấm vào nút + để bắt đầu chat
-                </Text>
-              </>
-            )}
-          </View>
+          <EmptyState
+            title="Chưa có cuộc trò chuyện"
+            message="Bắt đầu trò chuyện với bạn bè của bạn!"
+            theme={theme}
+          />
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={[theme.primary]}
+            tintColor={theme.primary}
+          />
         }
+        contentContainerStyle={filteredConversations.length === 0 && styles.emptyContainer}
+        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -509,94 +238,39 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 0,
-    shadowColor: SHADOWS.CARD.shadowColor,
-    shadowOffset: SHADOWS.CARD.shadowOffset,
-    shadowOpacity: SHADOWS.CARD.shadowOpacity,
-    shadowRadius: SHADOWS.CARD.shadowRadius,
-    elevation: SHADOWS.CARD.elevation,
-  },
   searchContainer: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: RADIUS.LG,
-    marginHorizontal: 16,
-    marginVertical: 10,
-    paddingHorizontal: 14,
-    borderWidth: 1,
-    shadowColor: SHADOWS.CARD.shadowColor,
-    shadowOffset: SHADOWS.CARD.shadowOffset,
-    shadowOpacity: SHADOWS.CARD.shadowOpacity,
-    shadowRadius: SHADOWS.CARD.shadowRadius,
-    elevation: SHADOWS.CARD.elevation,
-  },
-  searchIcon: {
-    marginRight: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
   searchInput: {
     flex: 1,
+    marginLeft: 8,
     fontSize: 16,
-    paddingVertical: 10,
-  },
-  clearButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  iconButton: {
-    padding: 4,
   },
   conversationItem: {
     flexDirection: 'row',
-    padding: 14,
-    marginHorizontal: 12,
-    marginVertical: 6,
-    borderRadius: RADIUS.LG,
     alignItems: 'center',
-    shadowColor: SHADOWS.CARD.shadowColor,
-    shadowOffset: SHADOWS.CARD.shadowOffset,
-    shadowOpacity: SHADOWS.CARD.shadowOpacity,
-    shadowRadius: SHADOWS.CARD.shadowRadius,
-    elevation: SHADOWS.CARD.elevation,
-  },
-  callButtons: {
-    flexDirection: 'row',
-    gap: 8,
-    marginLeft: 'auto',
-  },
-  callButton: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.PRIMARY_LIGHT,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     alignItems: 'center',
-    marginRight: 14,
-  },
-  avatarImage: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    marginRight: 14,
+    justifyContent: 'center',
+    marginRight: 12,
   },
   avatarText: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
   conversationInfo: {
@@ -605,27 +279,14 @@ const styles = StyleSheet.create({
   conversationHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  nameContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   conversationName: {
     fontSize: 16,
     fontWeight: '600',
-    marginRight: 6,
-  },
-  onlineIndicator: {
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-    backgroundColor: COLORS.SUCCESS,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flex: 1,
+    marginRight: 8,
   },
   time: {
     fontSize: 12,
@@ -633,20 +294,13 @@ const styles = StyleSheet.create({
   lastMessage: {
     fontSize: 14,
   },
-  empty: {
+  separator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 78,
+  },
+  emptyContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 100,
-  },
-  emptyText: {
-    fontSize: 18,
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 14,
   },
 });
 
 export default ConversationsScreen;
-

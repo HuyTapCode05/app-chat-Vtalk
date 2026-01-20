@@ -16,6 +16,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 import api, { BASE_URL } from '../config/api';
 import storage from '../utils/storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,6 +27,7 @@ import QuickReactions from '../components/QuickReactions';
 import ContactMenu from '../components/ContactMenu';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
+import VoiceMessage from '../components/VoiceMessage';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
 import { COLORS, STORAGE_KEYS, REACTIONS, MESSAGE_TYPES } from '../utils/constants';
@@ -61,6 +63,7 @@ const HeaderIconButton = ({ onPress, style, children }) => {
 const ChatScreen = ({ route, navigation }) => {
   const { conversation: initialConversation, conversationName } = route.params;
   const { user } = useAuth();
+  const { theme } = useTheme();
   const socket = useSocket();
   const [conversation, setConversation] = useState(initialConversation);
   const [messages, setMessages] = useState([]);
@@ -922,7 +925,7 @@ const ChatScreen = ({ route, navigation }) => {
       });
 
       const token = await storage.getItem(STORAGE_KEYS.TOKEN);
-      const res = await fetch(`${BASE_URL}/api/messages`, {
+      const res = await fetch(`${BASE_URL}/api/messages/upload/voice`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -1189,11 +1192,12 @@ const ChatScreen = ({ route, navigation }) => {
               resizeMode="cover"
             />
           ) : isVoice ? (
-            <VoicePlayer
-              audioUri={`${BASE_URL}${item.content}`}
+            <VoiceMessage
+              voiceUrl={item.content}
               duration={item.duration || 0}
               isOwn={isOwn}
-              onError={(error) => Alert.alert('Lỗi', error)}
+              theme={theme}
+              baseUrl={BASE_URL}
             />
           ) : (
             <Text

@@ -23,25 +23,41 @@ const ContactMenu = memo(({ visible, onClose, user, onUnfriend, onBlock, onSetNi
   const [nickname, setNickname] = useState('');
   const [isBlocked, setIsBlocked] = useState(false);
   const [loadingBlockStatus, setLoadingBlockStatus] = useState(false);
+  const [isFriend, setIsFriend] = useState(false);
+  const [loadingFriendStatus, setLoadingFriendStatus] = useState(false);
 
   const userId = user?._id || user?.id;
 
-  // Check block status when menu opens
+  // Check block status and friend status when menu opens
   useEffect(() => {
     if (visible && userId && currentUserId && userId !== currentUserId) {
-      const checkBlockStatus = async () => {
+      const checkStatus = async () => {
         setLoadingBlockStatus(true);
+        setLoadingFriendStatus(true);
         try {
-          const res = await api.get(`/blocks/check/${userId}`);
-          setIsBlocked(res.data?.blockedByMe || false);
+          // Check block status
+          const blockRes = await api.get(`/blocks/check/${userId}`);
+          setIsBlocked(blockRes.data?.blockedByMe || false);
+          
+          // Check friend status
+          const friendRes = await api.get(`/friends/check/${userId}`);
+          setIsFriend(friendRes.data?.areFriends || false);
         } catch (error) {
-          console.error('Error checking block status:', error);
+          console.error('Error checking status:', error);
           setIsBlocked(false);
+          setIsFriend(false);
         } finally {
           setLoadingBlockStatus(false);
+          setLoadingFriendStatus(false);
         }
       };
-      checkBlockStatus();
+      checkStatus();
+    } else if (!visible) {
+      // Reset states when menu closes
+      setIsBlocked(false);
+      setIsFriend(false);
+      setLoadingBlockStatus(false);
+      setLoadingFriendStatus(false);
     }
   }, [visible, userId, currentUserId]);
 
@@ -70,6 +86,10 @@ const ContactMenu = memo(({ visible, onClose, user, onUnfriend, onBlock, onSetNi
           onPress: async () => {
             try {
               await api.delete(`/friends/${userId}`);
+              
+              // Update local state immediately
+              setIsFriend(false);
+              
               if (onUnfriend) onUnfriend(userId);
               onClose();
               showAlert('Thành công', 'Đã hủy kết bạn');
@@ -209,35 +229,11 @@ const ContactMenu = memo(({ visible, onClose, user, onUnfriend, onBlock, onSetNi
                 <Text style={styles.menuItemText}>Đặt biệt danh</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={async () => {
-                  try {
-                    const userId = user._id || user.id;
-                    const res = await api.get('/close-friends');
-                    const isCloseFriend = (res.data || []).some(cf => {
-                      const cfId = cf._id || cf.id;
-                      return cfId && String(cfId) === String(userId);
-                    });
-                    
-                    if (isCloseFriend) {
-                      await api.delete(`/close-friends/${userId}`);
-                      showAlert('Thành công', 'Đã bỏ đánh dấu bạn thân');
-                    } else {
-                      await api.post('/close-friends', { friendId: userId });
-                      showAlert('Thành công', 'Đã đánh dấu bạn thân');
-                    }
-                    onClose();
-                  } catch (error) {
-                    console.error('Error toggling close friend:', error);
-                    const errorMessage = error.response?.data?.message || 'Không thể thực hiện';
-                    handleApiError(error, errorMessage);
-                  }
-                }}
-                {...(Platform.OS === 'web' && {
-                  onClick: async (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
+              {/* Close Friend option - only show if they are friends */}
+              {isFriend && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={async () => {
                     try {
                       const userId = user._id || user.id;
                       const res = await api.get('/close-friends');
@@ -259,29 +255,59 @@ const ContactMenu = memo(({ visible, onClose, user, onUnfriend, onBlock, onSetNi
                       const errorMessage = error.response?.data?.message || 'Không thể thực hiện';
                       handleApiError(error, errorMessage);
                     }
-                  },
-                  pointerEvents: 'auto',
-                })}
-              >
-                <Ionicons name="star" size={22} color="#FFD700" />
-                <Text style={styles.menuItemText}>Đánh dấu bạn thân</Text>
-              </TouchableOpacity>
+                  }}
+                  {...(Platform.OS === 'web' && {
+                    onClick: async (e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      try {
+                        const userId = user._id || user.id;
+                        const res = await api.get('/close-friends');
+                        const isCloseFriend = (res.data || []).some(cf => {
+                          const cfId = cf._id || cf.id;
+                          return cfId && String(cfId) === String(userId);
+                        });
+                        
+                        if (isCloseFriend) {
+                          await api.delete(`/close-friends/${userId}`);
+                          showAlert('Thành công', 'Đã bỏ đánh dấu bạn thân');
+                        } else {
+                          await api.post('/close-friends', { friendId: userId });
+                          showAlert('Thành công', 'Đã đánh dấu bạn thân');
+                        }
+                        onClose();
+                      } catch (error) {
+                        console.error('Error toggling close friend:', error);
+                        const errorMessage = error.response?.data?.message || 'Không thể thực hiện';
+                        handleApiError(error, errorMessage);
+                      }
+                    },
+                    pointerEvents: 'auto',
+                  })}
+                >
+                  <Ionicons name="star" size={22} color="#FFD700" />
+                  <Text style={styles.menuItemText}>Đánh dấu bạn thân</Text>
+                </TouchableOpacity>
+              )}
 
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={handleUnfriend}
-                {...(Platform.OS === 'web' && {
-                  onClick: (e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    handleUnfriend();
-                  },
-                  pointerEvents: 'auto',
-                })}
-              >
-                <Ionicons name="person-remove" size={22} color="#ff4444" />
-                <Text style={[styles.menuItemText, styles.dangerText]}>Hủy kết bạn</Text>
-              </TouchableOpacity>
+              {/* Unfriend option - only show if they are friends */}
+              {isFriend && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={handleUnfriend}
+                  {...(Platform.OS === 'web' && {
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      handleUnfriend();
+                    },
+                    pointerEvents: 'auto',
+                  })}
+                >
+                  <Ionicons name="person-remove" size={22} color="#ff4444" />
+                  <Text style={[styles.menuItemText, styles.dangerText]}>Hủy kết bạn</Text>
+                </TouchableOpacity>
+              )}
 
               <TouchableOpacity
                 style={styles.menuItem}

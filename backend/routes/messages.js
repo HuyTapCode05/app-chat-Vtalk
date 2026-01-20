@@ -4,7 +4,6 @@ const auth = require('../middleware/auth');
 const storage = require('../storage/dbStorage');
 const upload = require('../middleware/upload');
 
-// Helper: Populate message with sender data
 const populateMessage = async (message) => {
   const sender = await storage.users.findById(message.sender);
   if (sender) {
@@ -16,9 +15,6 @@ const populateMessage = async (message) => {
   return message;
 };
 
-// @route   GET /api/messages/:conversationId
-// @desc    Lấy messages của một conversation
-// @access  Private
 router.get('/:conversationId', auth, async (req, res) => {
   try {
     const { conversationId } = req.params;
@@ -49,9 +45,38 @@ router.get('/:conversationId', auth, async (req, res) => {
   }
 });
 
-// @route   POST /api/messages
-// @desc    Tạo message mới
-// @access  Private
+router.post('/upload/voice', auth, upload.single('voice'), async (req, res) => {
+  try {
+    const { conversationId, duration } = req.body;
+    
+    if (!req.file) {
+      return res.status(400).json({ message: 'Không có file voice' });
+    }
+    
+    const fileUrl = `/uploads/${req.file.filename}`;
+    
+    const messageData = {
+      conversation: conversationId,
+      sender: req.user.id,
+      content: fileUrl,
+      type: 'voice',
+      duration: duration ? parseInt(duration) : null
+    };
+    
+    const message = await storage.messages.create(messageData);
+    const populated = await populateMessage(message);
+    
+    res.json(populated);
+    
+  } catch (error) {
+    console.error('Voice upload error:', error);
+    res.status(500).json({ 
+      message: 'Lỗi server khi upload voice',
+      error: error.message 
+    });
+  }
+});
+
 router.post('/', auth, upload.fields([
   { name: 'image', maxCount: 1 },
   { name: 'voice', maxCount: 1 }
@@ -60,7 +85,6 @@ router.post('/', auth, upload.fields([
     const { conversationId, content, type = 'text', duration } = req.body;
     let fileUrl = '';
 
-    // Handle file upload (image or voice)
     if (req.files) {
       const imageFile = req.files['image'] ? req.files['image'][0] : null;
       const voiceFile = req.files['voice'] ? req.files['voice'][0] : null;
@@ -76,7 +100,6 @@ router.post('/', auth, upload.fields([
       return res.status(400).json({ message: 'conversationId là bắt buộc' });
     }
 
-    // Verify user is participant
     const conversation = await storage.conversations.findById(conversationId);
     if (!conversation) {
       return res.status(404).json({ message: 'Không tìm thấy conversation' });
@@ -92,7 +115,6 @@ router.post('/', auth, upload.fields([
       return res.status(400).json({ message: 'Content hoặc file là bắt buộc' });
     }
 
-    // Create message data
     const messageData = {
       conversation: conversationId,
       sender: req.user.id,
@@ -101,14 +123,12 @@ router.post('/', auth, upload.fields([
       readBy: []
     };
 
-    // Add duration for voice messages
     if (type === 'voice' && duration) {
       messageData.duration = parseInt(duration);
     }
 
     const message = await storage.messages.create(messageData);
 
-    // Update conversation last message
     await storage.conversations.update(conversationId, {
       lastMessage: message._id,
       lastMessageAt: new Date().toISOString()
@@ -141,9 +161,6 @@ router.put('/:id/read', auth, async (req, res) => {
   }
 });
 
-// @route   GET /api/messages/search
-// @desc    Tìm tin nhắn
-// @access  Private
 router.get('/search', auth, async (req, res) => {
   try {
     const { conversationId, query } = req.query;

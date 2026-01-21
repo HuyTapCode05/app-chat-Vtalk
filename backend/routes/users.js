@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const adminAuth = require('../middleware/adminAuth');
 const storage = require('../storage/dbStorage');
 const upload = require('../middleware/upload');
 const path = require('path');
@@ -13,6 +14,19 @@ const setIO = (socketIO) => {
 
 // Make setIO available on the router
 router.setIO = setIO;
+
+// @route   GET /api/users/all
+// @desc    [ADMIN] Lấy danh sách tất cả users
+// @access  Admin
+router.get('/all', adminAuth, async (req, res) => {
+  try {
+    const allUsers = await storage.users.getAllUsers();
+    res.json(allUsers);
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách tất cả người dùng (admin):', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
 
 // @route   GET /api/users
 // @desc    Lấy danh sách tất cả users (trừ user hiện tại)

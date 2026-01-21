@@ -1,6 +1,12 @@
+require('dotenv').config();
+
 module.exports = {
   expo: {
     name: "VTalk",
+    extra: {
+      API_URL: process.env.API_URL || 'http://192.168.1.13:5000/api',
+      SOCKET_URL: process.env.SOCKET_URL || 'http://192.168.1.13:5000',
+    },
     slug: "vtalk",
     scheme: "vtalk",
     projectId: "vtalk-demo-project",

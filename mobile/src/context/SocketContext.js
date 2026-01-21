@@ -1,13 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
-import { BASE_URL } from '../config/api';
+import Constants from 'expo-constants';
 import { SOCKET_CONFIG } from '../utils/env';
 import { logger } from '../utils/logger';
 
 const SocketContext = createContext();
 
-const SOCKET_URL = BASE_URL; 
+const SOCKET_URL = Constants.expoConfig.extra.SOCKET_URL; 
 
 export const useSocket = () => {
   const context = useContext(SocketContext);

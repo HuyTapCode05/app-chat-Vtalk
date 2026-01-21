@@ -1,33 +1,14 @@
 import axios from 'axios';
-import storage from '../utils/storage';
+import { secureStorage } from '../utils/storage';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { API_TIMEOUT, STORAGE_KEYS } from '../utils/constants';
 import { handleNetworkError } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
 import { API_CONFIG } from '../utils/env';
 
-// Auto-detect IP or fallback to manual IP
-const AUTO_DETECT_IP = false; // Set to true when Metro provides global IP
-const MANUAL_IP = '192.168.1.5'; // Update this if your IP changes
-
-const getLocalIP = () => {
-  // For now, use manual IP. 
-  // TODO: Auto-detect from Metro when available
-  return MANUAL_IP;
-};
-
-const YOUR_COMPUTER_IP = AUTO_DETECT_IP ? getLocalIP() : MANUAL_IP;
-
-console.log('🌐 Using IP for API:', YOUR_COMPUTER_IP);
-
-const getApiUrl = () => {
-  if (Platform.OS === 'web') {
-    return 'http://localhost:5000/api';
-  }
-  return `http://${YOUR_COMPUTER_IP}:5000/api`;
-};
-
-const API_URL = getApiUrl();
+// Get API URL from environment variables (app.config.js)
+const API_URL = Constants.expoConfig.extra.API_URL;
 const BASE_URL = API_URL.replace('/api', '');
 
 /**
@@ -47,7 +28,7 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await storage.getItem(STORAGE_KEYS.TOKEN);
+      const token = await secureStorage.getItem(STORAGE_KEYS.TOKEN);
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }

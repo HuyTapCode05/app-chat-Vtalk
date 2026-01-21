@@ -40,6 +40,7 @@ const initDatabase = () => {
           verificationToken TEXT,
           isOnline INTEGER DEFAULT 0,
           lastSeen DATETIME,
+          role TEXT DEFAULT 'user',
           createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
           updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -365,6 +366,13 @@ const initDatabase = () => {
           reject(err);
         } else if (!errorOccurred) {
           console.log('✅ Database tables initialized');
+
+          // Add role column to users if not exists
+          db.run(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'`, (err) => {
+            if (err && !err.message.includes('duplicate column')) {
+              console.warn('Warning adding role column:', err.message);
+            }
+          });
           
           // Add wallpaper column to conversations if not exists
           db.run(`
@@ -432,4 +440,3 @@ module.exports = {
   all,
   initDatabase,
 };
-

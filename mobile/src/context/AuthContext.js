@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Platform } from 'react-native';
-import storage from '../utils/storage';
+import storage, { secureStorage } from '../utils/storage';
 import api from '../config/api';
 import { logger } from '../utils/logger';
 import { STORAGE_KEYS } from '../utils/constants';
@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = useCallback(async () => {
     try {
-      const token = await storage.getItem(STORAGE_KEYS.TOKEN);
+      const token = await secureStorage.getItem(STORAGE_KEYS.TOKEN);
       const savedUser = await storage.getItem(STORAGE_KEYS.USER);
       
       if (token && savedUser) {
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
             logger.warn('Token verification failed:', error.response?.status || error.message);
           }
           // Clear invalid token and user data
-          await storage.removeItem(STORAGE_KEYS.TOKEN);
+          await secureStorage.removeItem(STORAGE_KEYS.TOKEN);
           await storage.removeItem(STORAGE_KEYS.USER);
           setUser(null);
         }
@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     const { token, user } = res.data;
-    await storage.setItem(STORAGE_KEYS.TOKEN, token);
+    await secureStorage.setItem(STORAGE_KEYS.TOKEN, token);
     await storage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
     setUser(user);
     logger.success('User logged in');

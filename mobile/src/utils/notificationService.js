@@ -7,15 +7,20 @@ import { getImageUrl } from './helpers';
 let Notifications = null;
 if (Platform.OS !== 'web') {
   try {
-    Notifications = require('expo-notifications');
-    // Configure notification behavior
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
-    });
+    // Skip expo-notifications in development to avoid projectId issues
+    if (__DEV__) {
+      console.warn('⚠️ expo-notifications disabled in development');
+    } else {
+      Notifications = require('expo-notifications');
+      // Configure notification behavior
+      Notifications.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+        }),
+      });
+    }
   } catch (error) {
     console.warn('expo-notifications not available:', error);
   }
@@ -38,6 +43,12 @@ class NotificationService {
     }
 
     try {
+      // Skip initialization in Expo Go to avoid projectId errors
+      if (__DEV__ && typeof __expo !== 'undefined' && __expo?.Constants?.appOwnership === 'expo') {
+        logger.warn('⚠️ Notifications disabled in Expo Go');
+        return false;
+      }
+
       // On web, use browser Notification API
       if (Platform.OS === 'web') {
         if ('Notification' in window) {

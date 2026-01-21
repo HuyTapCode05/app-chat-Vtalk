@@ -24,6 +24,8 @@ import HelpScreen from './src/screens/HelpScreen';
 import PersonalPageScreen from './src/screens/PersonalPageScreen';
 import CallScreen from './src/screens/CallScreen';
 import CreateGroupScreen from './src/screens/CreateGroupScreen';
+import CreateStoryScreen from './src/screens/CreateStoryScreen';
+import StoryViewer from './src/screens/StoryViewer';
 import IncomingCallHandler from './src/components/IncomingCallHandler';
 import { COLORS } from './src/utils/constants';
 import notificationService from './src/utils/notificationService';
@@ -359,6 +361,23 @@ function AppNavigator() {
               name="CreateGroup" 
               component={CreateGroupScreen}
               options={{ title: 'Tạo nhóm' }}
+            />
+            <Stack.Screen 
+              name="CreateStory" 
+              component={CreateStoryScreen}
+              options={{ 
+                headerShown: false,
+                presentation: 'modal'
+              }}
+            />
+            <Stack.Screen 
+              name="StoryViewer" 
+              component={StoryViewer}
+              options={{ 
+                headerShown: false,
+                presentation: 'modal',
+                gestureEnabled: true
+              }}
             />
           </>
         )}

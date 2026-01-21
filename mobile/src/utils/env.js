@@ -1,7 +1,4 @@
-/**
- * Environment Configuration
- * Centralized environment variables and configuration
- */
+
 
 import { Platform } from 'react-native';
 

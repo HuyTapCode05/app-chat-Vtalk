@@ -3,6 +3,7 @@ module.exports = {
     name: "VTalk",
     slug: "vtalk",
     scheme: "vtalk",
+    projectId: "vtalk-demo-project",
     version: "1.0.0",
     sdkVersion: "54.0.0",
     orientation: "portrait",

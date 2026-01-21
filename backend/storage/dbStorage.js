@@ -1101,6 +1101,195 @@ const emailVerificationStorage = {
   },
 };
 
+// ============ STORIES ============
+const storiesStorage = {
+  async create(storyData) {
+    const id = `story_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours from now
+    
+    await run(
+      `INSERT INTO stories (id, userId, type, content, mediaUrl, backgroundColor, textColor, createdAt, expiresAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        storyData.userId,
+        storyData.type,
+        storyData.content || null,
+        storyData.mediaUrl || null,
+        storyData.backgroundColor || null,
+        storyData.textColor || null,
+        now,
+        expiresAt
+      ]
+    );
+
+    return this.findById(id);
+  },
+
+  async findById(id) {
+    const story = await get(
+      `SELECT s.*, u.fullName, u.username, u.avatar
+       FROM stories s
+       JOIN users u ON s.userId = u.id
+       WHERE s.id = ? AND s.expiresAt > datetime('now')`,
+      [id]
+    );
+    
+    if (story) {
+      return {
+        ...story,
+        author: {
+          id: story.userId,
+          fullName: story.fullName,
+          username: story.username,
+          avatar: story.avatar
+        }
+      };
+    }
+    return null;
+  },
+
+  async getStoriesByUserId(userId) {
+    const stories = await all(
+      `SELECT * FROM stories 
+       WHERE userId = ? AND expiresAt > datetime('now')
+       ORDER BY createdAt DESC`,
+      [userId]
+    );
+    return stories;
+  },
+
+  async getFriendsStories(userId) {
+    // Get friend IDs
+    const friendIds = await friendsStorage.getFriends(userId);
+    
+    if (friendIds.length === 0) {
+      return [];
+    }
+    
+    const placeholders = friendIds.map(() => '?').join(',');
+    const stories = await all(
+      `SELECT s.*, u.fullName, u.username, u.avatar,
+              COUNT(sv.id) as viewsCount,
+              MAX(CASE WHEN sv.viewerId = ? THEN 1 ELSE 0 END) as viewedByMe
+       FROM stories s
+       JOIN users u ON s.userId = u.id
+       LEFT JOIN story_views sv ON s.id = sv.storyId
+       WHERE s.userId IN (${placeholders}) AND s.expiresAt > datetime('now')
+       GROUP BY s.id
+       ORDER BY s.createdAt DESC`,
+      [userId, ...friendIds]
+    );
+    
+    return stories.map(story => ({
+      ...story,
+      author: {
+        id: story.userId,
+        fullName: story.fullName,
+        username: story.username,
+        avatar: story.avatar
+      },
+      viewsCount: story.viewsCount || 0,
+      viewedByMe: story.viewedByMe === 1
+    }));
+  },
+
+  async getUserStoriesWithViews(userId) {
+    const stories = await all(
+      `SELECT s.*, COUNT(sv.id) as viewsCount
+       FROM stories s
+       LEFT JOIN story_views sv ON s.id = sv.storyId
+       WHERE s.userId = ? AND s.expiresAt > datetime('now')
+       GROUP BY s.id
+       ORDER BY s.createdAt DESC`,
+      [userId]
+    );
+    
+    return stories.map(story => ({
+      ...story,
+      viewsCount: story.viewsCount || 0
+    }));
+  },
+
+  async deleteExpiredStories() {
+    const result = await run(
+      `DELETE FROM stories WHERE expiresAt <= datetime('now')`
+    );
+    return result.changes || 0;
+  },
+
+  async delete(id) {
+    // Delete story views first
+    await run('DELETE FROM story_views WHERE storyId = ?', [id]);
+    // Delete story
+    await run('DELETE FROM stories WHERE id = ?', [id]);
+    return true;
+  },
+};
+
+// ============ STORY VIEWS ============
+const storyViewsStorage = {
+  async addView(storyId, viewerId) {
+    const id = `view_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    
+    // Check if already viewed
+    const existing = await this.getView(storyId, viewerId);
+    if (existing) {
+      return existing; // Already viewed
+    }
+    
+    await run(
+      `INSERT INTO story_views (id, storyId, viewerId, viewedAt)
+       VALUES (?, ?, ?, ?)`,
+      [id, storyId, viewerId, now]
+    );
+
+    return this.findById(id);
+  },
+
+  async findById(id) {
+    return await get('SELECT * FROM story_views WHERE id = ?', [id]);
+  },
+
+  async getView(storyId, viewerId) {
+    return await get(
+      'SELECT * FROM story_views WHERE storyId = ? AND viewerId = ?',
+      [storyId, viewerId]
+    );
+  },
+
+  async getStoryViewers(storyId) {
+    const views = await all(
+      `SELECT sv.*, u.fullName, u.username, u.avatar
+       FROM story_views sv
+       JOIN users u ON sv.viewerId = u.id
+       WHERE sv.storyId = ?
+       ORDER BY sv.viewedAt DESC`,
+      [storyId]
+    );
+    
+    return views.map(view => ({
+      ...view,
+      viewer: {
+        id: view.viewerId,
+        fullName: view.fullName,
+        username: view.username,
+        avatar: view.avatar
+      }
+    }));
+  },
+
+  async getViewsCount(storyId) {
+    const result = await get(
+      'SELECT COUNT(*) as count FROM story_views WHERE storyId = ?',
+      [storyId]
+    );
+    return result.count || 0;
+  },
+};
+
 module.exports = {
   users: userStorage,
   conversations: conversationStorage,
@@ -1117,5 +1306,7 @@ module.exports = {
   archivedConversations: archivedConversationsStorage,
   messageReactions: messageReactionsStorage,
   emailVerifications: emailVerificationStorage,
+  stories: storiesStorage,
+  storyViews: storyViewsStorage,
 };
 

@@ -12,6 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../context/SocketContext';
 import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,7 @@ import { getUserId, getUserDisplayName, getImageUrl, getFirstChar } from '../uti
 
 const ContactsScreen = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme, isDarkMode } = useTheme();
   const socket = useSocket();
   const [activeTab, setActiveTab] = useState('friends'); // 'requests', 'friends', 'groups', 'all'
   const [users, setUsers] = useState([]);
@@ -645,16 +647,16 @@ const ContactsScreen = ({ navigation, route }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme?.background || (isDarkMode ? '#121212' : '#FFFFFF') }]}>
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { backgroundColor: theme?.card || (isDarkMode ? '#1E1E1E' : '#F5F5F5') }]}>
+        <Ionicons name="search" size={20} color={theme?.textSecondary || (isDarkMode ? '#666666' : '#999999')} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme?.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}
           placeholder="Tìm kiếm..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme?.textSecondary || (isDarkMode ? '#666666' : '#999999')}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>

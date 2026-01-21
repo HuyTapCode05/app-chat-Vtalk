@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,17 +17,14 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../context/SocketContext';
 import EmptyState from '../components/EmptyState';
-import StoryList from '../components/StoryList';
 
 const BASE_URL = 'http://192.168.1.5:5000';
 
 const ConversationsScreen = () => {
   const { user } = useAuth();
   const { theme } = useTheme();
-  const socketContext = useSocket();
-  const socket = socketContext?.socket;
+  const { socket } = useSocket();
   const navigation = useNavigation();
-  const storyListRef = useRef(null);
   
   const [conversations, setConversations] = useState([]);
   const [nicknames, setNicknames] = useState({});
@@ -36,6 +33,12 @@ const ConversationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [pinnedConversations, setPinnedConversations] = useState([]);
   const [archivedConversations, setArchivedConversations] = useState([]);
+
+  // Filter conversations based on search
+  const filteredConversations = conversations.filter(conversation => {
+    const displayName = getDisplayName(conversation);
+    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const getDisplayName = (conversation) => {
     if (!conversation) return 'Unknown';
@@ -55,25 +58,6 @@ const ConversationsScreen = () => {
     if (otherUser.username) return otherUser.username;
     return 'Unknown User';
   };
-
-  const formatLastMessage = (message) => {
-    if (!message) return 'Chưa có tin nhắn';
-    
-    if (message.type === 'voice') {
-      return '🎤 Tin nhắn thoại';
-    } else if (message.type === 'image') {
-      return '📷 Hình ảnh';
-    } else if (message.recalled) {
-      return 'Tin nhắn đã được thu hồi';
-    } else {
-      return message.content || 'Tin nhắn';
-    }
-  };
-
-  const filteredConversations = conversations.filter(conversation => {
-    const displayName = getDisplayName(conversation);
-    return displayName.toLowerCase().includes(searchQuery.toLowerCase());
-  });
 
   const loadConversations = async () => {
     try {
@@ -104,12 +88,6 @@ const ConversationsScreen = () => {
     setRefreshing(true);
     loadConversations();
     loadNicknames();
-    // Also refresh stories
-    storyListRef.current?.refresh();
-  };
-
-  const handleCreateStory = () => {
-    navigation.navigate('CreateStory');
   };
 
   const handleSelectConversation = (conversation) => {
@@ -127,8 +105,6 @@ const ConversationsScreen = () => {
       console.log('🔄 ConversationsScreen focused, refreshing...');
       loadConversations();
       loadNicknames();
-      // Refresh stories when coming back from CreateStory
-      storyListRef.current?.refresh();
     }, [])
   );
 
@@ -144,10 +120,11 @@ const ConversationsScreen = () => {
     
     return (
       <TouchableOpacity
-        style={[styles.conversationItem, { backgroundColor: theme.card }]}
+        style={[styles.conversationItem, { backgroundColor: theme.colors.card }]}
         onPress={() => handleSelectConversation(item)}
       >
-        <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+        {/* Avatar */}
+        <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
           <Text style={[styles.avatarText, { color: '#FFFFFF' }]}>
             {String(displayName).charAt(0).toUpperCase()}
           </Text>
@@ -157,12 +134,12 @@ const ConversationsScreen = () => {
         <View style={styles.conversationInfo}>
           <View style={styles.conversationHeader}>
             <Text 
-              style={[styles.conversationName, { color: theme.text }]} 
+              style={[styles.conversationName, { color: theme.colors.text }]} 
               numberOfLines={1}
             >
               {String(displayName)}
             </Text>
-            <Text style={[styles.time, { color: theme.textSecondary }]}>
+            <Text style={[styles.time, { color: theme.colors.textSecondary }]}>
               {item.lastMessageAt ? new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -171,10 +148,10 @@ const ConversationsScreen = () => {
           </View>
           
           <Text 
-            style={[styles.lastMessage, { color: theme.textSecondary }]}
+            style={[styles.lastMessage, { color: theme.colors.textSecondary }]}
             numberOfLines={1}
           >
-            {formatLastMessage(item.lastMessage)}
+            {item.lastMessage?.content || 'Chưa có tin nhắn'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -183,36 +160,29 @@ const ConversationsScreen = () => {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.center}>
-          <Text style={{ color: theme.text }}>Đang tải...</Text>
+          <Text style={{ color: theme.colors.text }}>Đang tải...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Search Header */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
-        <View style={[styles.searchInputContainer, { backgroundColor: theme.background }]}>
-          <Ionicons name="search" size={20} color={theme.textSecondary} />
+      <View style={[styles.searchContainer, { backgroundColor: theme.colors.card }]}>
+        <View style={[styles.searchInputContainer, { backgroundColor: theme.colors.background }]}>
+          <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
           <TextInput
-            style={[styles.searchInput, { color: theme.text }]}
+            style={[styles.searchInput, { color: theme.colors.text }]}
             placeholder="Tìm kiếm cuộc trò chuyện..."
-            placeholderTextColor={theme.textSecondary}
+            placeholderTextColor={theme.colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
       </View>
-
-      {/* Stories List */}
-      <StoryList 
-        ref={storyListRef}
-        onCreateStory={handleCreateStory}
-        onViewStory={(userStoryGroup) => navigation.navigate('StoryViewer', { userStoryGroup })}
-      />
 
       {/* Conversations List */}
       <FlatList
@@ -220,7 +190,7 @@ const ConversationsScreen = () => {
         keyExtractor={(item) => String(item._id || item.id || Math.random())}
         renderItem={renderConversationItem}
         ItemSeparatorComponent={() => (
-          <View style={[styles.separator, { backgroundColor: theme.border }]} />
+          <View style={[styles.separator, { backgroundColor: theme.colors.border }]} />
         )}
         ListEmptyComponent={
           <EmptyState
@@ -233,8 +203,8 @@ const ConversationsScreen = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            colors={[theme.primary]}
-            tintColor={theme.primary}
+            colors={[theme.colors.primary]}
+            tintColor={theme.colors.primary}
           />
         }
         contentContainerStyle={filteredConversations.length === 0 && styles.emptyContainer}

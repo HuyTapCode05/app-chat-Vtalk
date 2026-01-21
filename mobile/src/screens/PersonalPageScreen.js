@@ -17,6 +17,7 @@ import {
   Platform,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../context/SocketContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -63,6 +64,7 @@ const WebButton = ({ style, onPress, children, ...props }) => {
 
 const PersonalPageScreen = ({ route, navigation }) => {
   const { user: currentUser, setUser: setUserContext } = useAuth();
+  const { theme, isDarkMode } = useTheme();
   const socket = useSocket();
   
   // QUAN TRỌNG: Lấy userId từ route.params
@@ -864,7 +866,7 @@ const PersonalPageScreen = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme?.background || (isDarkMode ? '#121212' : '#FFFFFF') }]}>
       <ScrollView 
         style={styles.scrollView}
         refreshControl={

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
+import { useTheme } from '../context/ThemeContext';
 import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
 import { getConversationId, getFirstChar } from '../utils/helpers';
@@ -26,6 +27,8 @@ import { COLORS } from '../utils/constants';
 const GroupsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const socket = useSocket();
+  const { theme } = useTheme();
+  const styles = createStyles(theme);
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +52,7 @@ const GroupsScreen = ({ navigation }) => {
           style={{ marginRight: 16 }}
           onPress={() => navigation.navigate('CreateGroup')}
         >
-          <Ionicons name="add-circle" size={28} color="#fff" />
+          <Ionicons name="add-circle" size={28} color={theme.headerText} />
         </TouchableOpacity>
       ),
     });
@@ -143,7 +146,7 @@ const GroupsScreen = ({ navigation }) => {
   const renderGroup = ({ item }) => {
     return (
       <TouchableOpacity
-        style={styles.groupItem}
+        style={[styles.groupItem, { backgroundColor: theme.cardBackground }]}
         onPress={() => handleSelectGroup(item)}
         onLongPress={() => {
           const groupId = getConversationId(item);
@@ -220,9 +223,9 @@ const GroupsScreen = ({ navigation }) => {
         </View>
         <View style={styles.groupInfo}>
           <View style={styles.groupHeader}>
-            <Text style={styles.groupName}>{item.name || 'Nhóm chat'}</Text>
+            <Text style={[styles.groupName, { color: theme.textPrimary }]}>{item.name || 'Nhóm chat'}</Text>
             {item.lastMessageAt && (
-              <Text style={styles.time}>
+              <Text style={[styles.time, { color: theme.textTertiary }]}>
                 {new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -231,11 +234,11 @@ const GroupsScreen = ({ navigation }) => {
             )}
           </View>
           <View style={styles.messageRow}>
-            <Text style={styles.lastMessage} numberOfLines={1}>
+            <Text style={[styles.lastMessage, { color: theme.textSecondary }]} numberOfLines={1}>
               {getLastMessage(item)}
             </Text>
           </View>
-          <Text style={styles.memberCount}>
+          <Text style={[styles.memberCount, { color: theme.textTertiary }]}>
             {item.participants?.length || 0} thành viên
           </Text>
         </View>
@@ -245,23 +248,23 @@ const GroupsScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={COLORS.PRIMARY} />
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+        <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme.textPrimary }]}
           placeholder="Tìm kiếm nhóm..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.textSecondary}
           autoCapitalize="none"
         />
         {searchQuery.length > 0 && (
@@ -269,7 +272,7 @@ const GroupsScreen = ({ navigation }) => {
             onPress={() => setSearchQuery('')}
             style={styles.clearButton}
           >
-            <Ionicons name="close-circle" size={20} color="#999" />
+            <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -282,16 +285,16 @@ const GroupsScreen = ({ navigation }) => {
           <View style={styles.empty}>
             {searchQuery ? (
               <>
-                <Text style={styles.emptyText}>Không tìm thấy kết quả</Text>
-                <Text style={styles.emptySubtext}>
+                <Text style={[styles.emptyText, { color: theme.textTertiary }]}>Không tìm thấy kết quả</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
                   Thử tìm kiếm với từ khóa khác
                 </Text>
               </>
             ) : (
               <>
-                <Ionicons name="people-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Chưa có nhóm nào</Text>
-                <Text style={styles.emptySubtext}>
+                <Ionicons name="people-outline" size={64} color={theme.textTertiary} />
+                <Text style={[styles.emptyText, { color: theme.textTertiary }]}>Chưa có nhóm nào</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
                   Bấm vào nút + để tạo nhóm mới
                 </Text>
               </>
@@ -306,10 +309,9 @@ const GroupsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.BACKGROUND,
   },
   center: {
     flex: 1,
@@ -319,13 +321,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.CARD_BACKGROUND,
     borderRadius: 12,
     marginHorizontal: 16,
     marginVertical: 10,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: COLORS.BORDER,
   },
   searchIcon: {
     marginRight: 8,
@@ -334,7 +334,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingVertical: 10,
-    color: COLORS.TEXT_PRIMARY,
   },
   clearButton: {
     padding: 4,
@@ -345,7 +344,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginVertical: 6,
     borderRadius: 12,
-    backgroundColor: COLORS.CARD_BACKGROUND,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -378,12 +376,10 @@ const styles = StyleSheet.create({
   groupName: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.TEXT_PRIMARY,
     marginRight: 6,
   },
   time: {
     fontSize: 12,
-    color: COLORS.TEXT_TERTIARY,
   },
   messageRow: {
     flexDirection: 'row',
@@ -393,12 +389,10 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: 14,
-    color: COLORS.TEXT_SECONDARY,
     flex: 1,
   },
   memberCount: {
     fontSize: 12,
-    color: COLORS.TEXT_TERTIARY,
   },
   empty: {
     flex: 1,
@@ -408,13 +402,11 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 18,
-    color: COLORS.TEXT_TERTIARY,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
     fontSize: 14,
-    color: COLORS.TEXT_TERTIARY,
   },
 });
 

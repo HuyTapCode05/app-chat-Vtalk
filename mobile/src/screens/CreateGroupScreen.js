@@ -26,7 +26,6 @@ const CreateGroupScreen = ({ navigation, route }) => {
   const [creating, setCreating] = useState(false);
   const searchTimeoutRef = useRef(null);
 
-  // Search users by username (Telegram style)
   useEffect(() => {
     // Clear previous timeout
     if (searchTimeoutRef.current) {
@@ -113,8 +112,6 @@ const CreateGroupScreen = ({ navigation, route }) => {
         name: groupName.trim(),
       });
 
-      // Sau khi tạo xong thì nhảy thẳng vào phòng chat của nhóm mới,
-      // không hiện Alert nữa để tránh cảm giác "spam tạo nhóm".
       navigation.replace('Chat', {
         conversation: res.data,
         conversationName: res.data.name || groupName.trim(),

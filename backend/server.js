@@ -67,6 +67,7 @@ app.use('/api/nicknames', require('./routes/nicknames'));
 app.use('/api/pinned-messages', require('./routes/pinnedMessages'));
 app.use('/api/close-friends', require('./routes/closeFriends'));
 app.use('/api/posts', require('./routes/posts'));
+app.use('/api/stories', require('./routes/stories'));
 
 // Socket.io connection handling
 const { handleSocketConnection } = require('./socket/socketHandler');
@@ -88,6 +89,11 @@ app.get('/api/health', (req, res) => {
 initDatabase()
   .then(() => {
     console.log('✅ Database initialized');
+    
+    // Start story cleanup cron job
+    const { startStoryCleanupJob } = require('./utils/storyCronJob');
+    startStoryCleanupJob();
+    
     server.listen(config.port, () => {
       console.log(`🚀 Server đang chạy tại port ${config.port}`);
       console.log(`🌍 Environment: ${config.nodeEnv}`);

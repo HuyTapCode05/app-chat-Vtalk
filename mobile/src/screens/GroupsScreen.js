@@ -21,6 +21,7 @@ import { useSocket } from '../context/SocketContext';
 import { useTheme } from '../context/ThemeContext';
 import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
+import { GroupSkeleton, SkeletonBox } from '../components/Skeleton';
 import { getConversationId, getFirstChar } from '../utils/helpers';
 
 const GroupsScreen = ({ navigation }) => {
@@ -247,8 +248,19 @@ const GroupsScreen = ({ navigation }) => {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        {/* Search Bar Skeleton */}
+        <View style={[styles.searchContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+          <SkeletonBox width="100%" height={40} borderRadius={12} />
+        </View>
+        
+        {/* Groups Skeleton */}
+        <FlatList
+          data={[1, 2, 3, 4, 5]}
+          keyExtractor={(item) => String(item)}
+          renderItem={() => <GroupSkeleton />}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
     );
   }

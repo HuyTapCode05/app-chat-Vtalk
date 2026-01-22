@@ -11,12 +11,39 @@ if (!fs.existsSync(DB_DIR)) {
   fs.mkdirSync(DB_DIR, { recursive: true });
 }
 
-// Create database connection
-const db = new sqlite3.Database(DB_PATH, (err) => {
+// Create database connection with WAL mode for better concurrent access
+const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error('❌ Error opening database:', err);
   } else {
     console.log('✅ Connected to SQLite database');
+    
+    // Enable WAL mode for better concurrent read/write performance
+    db.run('PRAGMA journal_mode = WAL;', (err) => {
+      if (err) {
+        console.warn('⚠️ Could not enable WAL mode:', err.message);
+      } else {
+        console.log('✅ WAL mode enabled for concurrent access');
+      }
+    });
+    
+    // Set busy timeout to handle concurrent writes (5 seconds)
+    db.configure('busyTimeout', 5000);
+    
+    // Optimize for concurrent access
+    db.run('PRAGMA synchronous = NORMAL;', (err) => {
+      if (err) console.warn('⚠️ Could not set synchronous mode:', err.message);
+    });
+    
+    // Increase cache size for better performance (64MB)
+    db.run('PRAGMA cache_size = -64000;', (err) => {
+      if (err) console.warn('⚠️ Could not set cache size:', err.message);
+    });
+    
+    // Enable foreign keys
+    db.run('PRAGMA foreign_keys = ON;', (err) => {
+      if (err) console.warn('⚠️ Could not enable foreign keys:', err.message);
+    });
   }
 });
 
@@ -340,6 +367,63 @@ const initDatabase = () => {
       });
       
       db.run(`CREATE INDEX IF NOT EXISTS idx_comments_post ON post_comments(postId)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      // Additional indexes for optimization
+      db.run(`CREATE INDEX IF NOT EXISTS idx_conversations_type ON conversations(type)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_conversations_lastMessageAt ON conversations(lastMessageAt DESC)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_friends_userId1 ON friends(userId1)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_friends_userId2 ON friends(userId2)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_friend_requests_fromUserId ON friend_requests(fromUserId)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_friend_requests_toUserId ON friend_requests(toUserId)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_blocks_blockerId ON blocks(blockerId)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_blocks_blockedId ON blocks(blockedId)`, (err) => {
         if (err && !errorOccurred) {
           errorOccurred = true;
           reject(err);

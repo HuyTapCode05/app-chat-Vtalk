@@ -28,6 +28,7 @@ import ContactMenu from '../components/ContactMenu';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import VoiceMessage from '../components/VoiceMessage';
+import { MessageSkeleton } from '../components/Skeleton';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
 import { COLORS, STORAGE_KEYS, REACTIONS, MESSAGE_TYPES } from '../utils/constants';
@@ -1306,8 +1307,19 @@ const ChatScreen = ({ route, navigation }) => {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00B14F" />
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.messagesContainer}>
+          <FlatList
+            data={[1, 2, 3, 4, 5, 6, 7, 8]}
+            keyExtractor={(item) => String(item)}
+            renderItem={({ index }) => (
+              <MessageSkeleton isOwn={index % 3 === 0} />
+            )}
+            contentContainerStyle={styles.messagesList}
+            inverted={false}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
       </View>
     );
   }
@@ -1392,7 +1404,7 @@ const ChatScreen = ({ route, navigation }) => {
         {/* Pinned Messages Header */}
         {!showSearch && pinnedMessages.length > 0 && (
           <View style={styles.pinnedHeader}>
-              <Ionicons name="pin" size={16} color="#00B14F" />
+            <Ionicons name="pin" size={16} color="#00B14F" />
             <Text style={styles.pinnedHeaderText}>
               {pinnedMessages.length} tin nhắn đã ghim
             </Text>

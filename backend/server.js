@@ -1,62 +1,57 @@
-/**
- * VTalk Backend Server
- * Main server file with Express and Socket.io setup
- */
-
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const compression = require('compression');
 const config = require('./config/config');
 
 const app = express();
 const server = http.createServer(app);
 
-// Socket.io setup
 const io = socketIo(server, {
   cors: {
     origin: config.cors.origins,
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling'], // Allow both transports
-  allowEIO3: true, // Support older clients
-  pingTimeout: 60000, // 60 seconds
-  pingInterval: 25000, // 25 seconds
-  upgradeTimeout: 30000, // 30 seconds
-  maxHttpBufferSize: 1e8, // 100MB
+  transports: ['websocket', 'polling'],
+  allowEIO3: true,
+  pingTimeout: 60000,
+  pingInterval: 25000,
+  upgradeTimeout: 30000,
+  maxHttpBufferSize: 1e8,
+  perMessageDeflate: false,
+  httpCompression: true,
+  connectTimeout: 45000,
+  allowUpgrades: true,
+  maxConnections: 10000,
 });
 
-// Pass io to routes that need it
 const usersRoutes = require('./routes/users');
 usersRoutes.setIO(io);
 
-// Security middleware
 const { apiLimiter, sanitizeInput, hideSensitiveHeaders } = require('./middleware/security');
 
-// Middleware
 app.use(hideSensitiveHeaders);
 app.use(sanitizeInput);
+app.use(compression());
 app.use(cors({
-  origin: true, // Allow all origins for development debugging
+  origin: true,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use('/api', apiLimiter);
 
-// Tạo thư mục uploads nếu chưa có
 const uploadsDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Serve static files (uploads)
 app.use('/uploads', express.static('uploads'));
 
-// Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', usersRoutes);
 app.use('/api/conversations', require('./routes/conversations'));
@@ -69,31 +64,82 @@ app.use('/api/close-friends', require('./routes/closeFriends'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/stories', require('./routes/stories'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/parental', require('./routes/parental'));
+app.use('/api/push-tokens', require('./routes/pushTokens'));
 
-// Socket.io connection handling
+const { socketAuth } = require('./middleware/socketAuth');
+io.use(socketAuth);
+
 const { handleSocketConnection } = require('./socket/socketHandler');
-io.on('connection', (socket) => handleSocketConnection(socket, io));
+io.on('connection', (socket) => {
+  console.log(`🔐 Authenticated socket connection: ${socket.userId}`);
+  handleSocketConnection(socket, io);
+});
 
-// Initialize database BEFORE starting server
 const { initDatabase } = require('./database/sqlite');
 
-// Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', async (req, res) => {
+  const { loginQueue, registerQueue, dbQueue } = require('./utils/requestQueue');
+  const sessionManager = require('./utils/sessionManager');
+  const memoryManager = require('./utils/memoryManager');
+  const connectionPool = require('./utils/connectionPool');
+  const batchProcessor = require('./utils/batchProcessor');
+  const jobQueue = require('./utils/jobQueue');
+  const { userCache, conversationCache, messageCache, generalCache } = require('./utils/advancedCache');
+  
   res.json({ 
     status: 'OK', 
     message: 'Server đang chạy',
-    storage: 'SQLite + JSON (Messages in JSON files)'
+    storage: 'SQLite + JSON (Messages in JSON files)',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    queues: {
+      login: loginQueue.getStats(),
+      register: registerQueue.getStats(),
+      database: dbQueue.getStats()
+    },
+    sessions: sessionManager.getStats(),
+    memory: memoryManager.getStats(),
+    connectionPool: connectionPool.getStats(),
+    batchProcessor: batchProcessor.getStats(),
+    jobQueue: jobQueue.getStats(),
+    backgroundTasks: require('./utils/backgroundTasks').getStats(),
+    performance: require('./utils/performanceMonitor').getStats(),
+    database: await require('./utils/databaseOptimizer').getStats().catch(() => ({ error: 'Unable to get stats' })),
+    cache: {
+      users: userCache.getStats(),
+      conversations: conversationCache.getStats(),
+      messages: messageCache.getStats(),
+      general: generalCache.getStats()
+    }
   });
 });
 
-// Initialize database then start server
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+app.use(notFoundHandler);
+app.use(errorHandler);
+
 initDatabase()
   .then(() => {
     console.log('✅ Database initialized');
     
-    // Start story cleanup cron job
     const { startStoryCleanupJob } = require('./utils/storyCronJob');
     startStoryCleanupJob();
+    
+    const memoryManager = require('./utils/memoryManager');
+    memoryManager.start();
+    
+    const backgroundTasks = require('./utils/backgroundTasks');
+    backgroundTasks.startCleanupTasks();
+    
+    const databaseOptimizer = require('./utils/databaseOptimizer');
+    databaseOptimizer.optimize().catch(err => {
+      console.warn('Database optimization failed:', err.message);
+    });
+    
+    backgroundTasks.addTask('optimize_database', async () => {
+      await databaseOptimizer.optimize();
+    }, 24 * 60 * 60 * 1000);
     
     server.listen(config.port, () => {
       console.log(`🚀 Server đang chạy tại port ${config.port}`);
@@ -102,6 +148,8 @@ initDatabase()
       console.log(`✅ Messages: JSON files (data/messages/)`);
       console.log(`📁 Data folder: ${path.join(__dirname, 'data')}`);
       console.log(`📁 Uploads folder: ${path.join(__dirname, config.upload.destination)}`);
+      console.log(`💾 Memory manager: Active`);
+      console.log(`🗜️ Compression: Enabled`);
     });
   })
   .catch(err => {

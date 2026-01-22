@@ -3,13 +3,16 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const storage = require('../storage/dbStorage');
 const upload = require('../middleware/upload');
+const { batchPopulateMessages, batchLoadUsers } = require('../utils/queryOptimizer');
+const messagePagination = require('../utils/messagePagination');
+const readReceiptBatch = require('../utils/readReceiptBatch');
 
 const populateMessage = async (message) => {
-  const sender = await storage.users.findById(message.sender);
-  if (sender) {
+  const senders = await batchLoadUsers([message.sender]);
+  if (senders.length > 0) {
     return {
       ...message,
-      sender: sender
+      sender: senders[0]
     };
   }
   return message;
@@ -18,7 +21,8 @@ const populateMessage = async (message) => {
 router.get('/:conversationId', auth, async (req, res) => {
   try {
     const { conversationId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
+    const { cursor, limit = 50, direction = 'backward' } = req.query;
+    const limitNum = Math.min(parseInt(limit) || 50, 100); // Max 100 messages per request
 
     // Verify user is participant
     const conversation = await storage.conversations.findById(conversationId);
@@ -31,14 +35,23 @@ router.get('/:conversationId', auth, async (req, res) => {
       return res.status(403).json({ message: 'Không có quyền truy cập' });
     }
 
-    const allMessages = await storage.messages.getMessagesByConversationId(conversationId);
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + parseInt(limit);
-    const messages = allMessages.slice(startIndex, endIndex);
+    // Use cursor-based pagination (faster than offset)
+    const result = await messagePagination.getMessages(conversationId, {
+      limit: limitNum,
+      cursor: cursor || null,
+      direction: direction || 'backward'
+    });
 
-    const populated = await Promise.all(messages.map(populateMessage));
+    // Batch populate all messages at once (optimized)
+    const populated = await batchPopulateMessages(result.messages);
 
-    res.json(populated);
+    res.json({
+      messages: populated,
+      hasMore: result.hasMore,
+      nextCursor: result.nextCursor, // For loading older messages
+      prevCursor: result.prevCursor, // For loading newer messages
+      total: result.total
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Lỗi server' });
@@ -144,7 +157,7 @@ router.post('/', auth, upload.fields([
 });
 
 // @route   PUT /api/messages/:id/read
-// @desc    Đánh dấu message đã đọc
+// @desc    Đánh dấu message đã đọc (batched)
 // @access  Private
 router.put('/:id/read', auth, async (req, res) => {
   try {
@@ -153,7 +166,10 @@ router.put('/:id/read', auth, async (req, res) => {
       return res.status(400).json({ message: 'conversationId là bắt buộc' });
     }
 
-    await storage.messages.markMessageAsRead(req.params.id, conversationId, req.user.id);
+    // Use batched read receipt (non-blocking)
+    readReceiptBatch.markAsRead(req.params.id, conversationId, req.user.id);
+    
+    // Return immediately (processing happens in background)
     res.json({ message: 'Đã đánh dấu đọc' });
   } catch (error) {
     console.error(error);
@@ -190,7 +206,8 @@ router.get('/search', auth, async (req, res) => {
       return content.includes(searchQuery);
     });
 
-    const populated = await Promise.all(matchedMessages.map(populateMessage));
+    // Batch populate all matched messages at once (optimized)
+    const populated = await batchPopulateMessages(matchedMessages);
     res.json(populated);
   } catch (error) {
     console.error(error);

@@ -5,6 +5,7 @@ const adminAuth = require('../middleware/adminAuth');
 const storage = require('../storage/dbStorage');
 const upload = require('../middleware/upload');
 const path = require('path');
+const { getCached, setCached, clearCache } = require('../utils/queryOptimizer');
 
 // Get io instance from app
 let io;
@@ -12,8 +13,11 @@ const setIO = (socketIO) => {
   io = socketIO;
 };
 
+const getIO = () => io;
+
 // Make setIO available on the router
 router.setIO = setIO;
+router.getIO = getIO;
 
 // @route   GET /api/users/all
 // @desc    [ADMIN] Lấy danh sách tất cả users
@@ -33,7 +37,15 @@ router.get('/all', adminAuth, async (req, res) => {
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const allUsers = await storage.users.getAllUsers();
+    // Cache users list for 2 minutes
+    const cacheKey = 'all_users';
+    let allUsers = getCached(cacheKey);
+    
+    if (!allUsers) {
+      allUsers = await storage.users.getAllUsers();
+      setCached(cacheKey, allUsers);
+    }
+    
     const users = allUsers
       .filter(u => u.id !== req.user.id)
       .sort((a, b) => a.fullName.localeCompare(b.fullName));
@@ -114,6 +126,10 @@ router.put('/me', auth, async (req, res) => {
 
     const updatedUser = await storage.users.update(req.user.id, updates);
     
+    // Clear cache when user updates
+    clearCache('all_users');
+    clearCache(`user_${req.user.id}`);
+    
     res.json(updatedUser);
   } catch (error) {
     console.error(error);
@@ -132,6 +148,10 @@ router.post('/me/avatar', auth, upload.single('avatar'), async (req, res) => {
 
     const avatarUrl = `/uploads/${req.file.filename}`;
     const updatedUser = await storage.users.update(req.user.id, { avatar: avatarUrl });
+    
+    // Clear cache
+    clearCache('all_users');
+    clearCache(`user_${req.user.id}`);
     
     // Emit socket event to notify others about avatar update
     if (io) {
@@ -160,6 +180,10 @@ router.post('/me/cover', auth, upload.single('coverPhoto'), async (req, res) => 
 
     const coverPhotoUrl = `/uploads/${req.file.filename}`;
     const updatedUser = await storage.users.update(req.user.id, { coverPhoto: coverPhotoUrl });
+    
+    // Clear cache
+    clearCache('all_users');
+    clearCache(`user_${req.user.id}`);
     
     // Emit socket event to notify others about cover photo update
     if (io) {

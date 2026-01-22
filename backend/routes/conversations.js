@@ -2,25 +2,22 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const storage = require('../storage/dbStorage');
+const { batchPopulateConversations, batchLoadUsers } = require('../utils/queryOptimizer');
 
-// Helper: Populate conversation with user data
+// Helper: Populate conversation with user data (optimized)
 const populateConversation = async (conversation) => {
-  const participants = await Promise.all(
-    (conversation.participants || []).map(async (id) => {
-      const user = await storage.users.findById(id);
-      return user || null;
-    })
-  );
-  const validParticipants = participants.filter(Boolean);
+  // Batch load all participants at once
+  const participantIds = (conversation.participants || []).filter(Boolean);
+  const participants = await batchLoadUsers(participantIds);
 
   let lastMessage = null;
   if (conversation.lastMessage) {
     const messages = await storage.messages.loadMessages(conversation.id);
     lastMessage = messages.find(m => m._id === conversation.lastMessage);
-    if (lastMessage) {
-      const sender = await storage.users.findById(lastMessage.sender);
-      if (sender) {
-        lastMessage.sender = sender;
+    if (lastMessage && lastMessage.sender) {
+      const senders = await batchLoadUsers([lastMessage.sender]);
+      if (senders.length > 0) {
+        lastMessage.sender = senders[0];
       }
     }
   }
@@ -29,7 +26,7 @@ const populateConversation = async (conversation) => {
   return {
     ...conversation,
     _id: conversation.id, // Add _id for frontend compatibility
-    participants: validParticipants,
+    participants,
     lastMessage
   };
 };
@@ -95,14 +92,35 @@ router.get('/', auth, async (req, res) => {
     
     // Reload conversations after fixes
     const fixedConversations = await storage.conversations.getConversationsByUserId(req.user.id);
-    const populated = await Promise.all(fixedConversations.map(populateConversation));
-    populated.sort((a, b) => {
+    
+    // Batch populate all conversations at once (optimized)
+    const populated = await batchPopulateConversations(fixedConversations);
+    
+    // Populate lastMessage for each conversation
+    const populatedWithLastMessage = await Promise.all(
+      populated.map(async (conv) => {
+        if (conv.lastMessage) {
+          const messages = await storage.messages.loadMessages(conv.id);
+          const lastMsg = messages.find(m => m._id === conv.lastMessage);
+          if (lastMsg && lastMsg.sender) {
+            const senders = await batchLoadUsers([lastMsg.sender]);
+            if (senders.length > 0) {
+              lastMsg.sender = senders[0];
+            }
+          }
+          return { ...conv, lastMessage: lastMsg };
+        }
+        return conv;
+      })
+    );
+    
+    populatedWithLastMessage.sort((a, b) => {
       const timeA = a.lastMessageAt ? new Date(a.lastMessageAt) : new Date(0);
       const timeB = b.lastMessageAt ? new Date(b.lastMessageAt) : new Date(0);
       return timeB - timeA;
     });
 
-    res.json(populated);
+    res.json(populatedWithLastMessage);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Lỗi server' });

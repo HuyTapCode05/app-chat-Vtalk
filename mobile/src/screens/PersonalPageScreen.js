@@ -21,6 +21,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../context/SocketContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { PostSkeleton, SkeletonBox, SkeletonCircle, SkeletonText } from '../components/Skeleton';
 import api, { BASE_URL } from '../config/api';
 import { timeAgo } from '../utils/timeAgo';
 import storage from '../utils/storage';
@@ -66,7 +67,7 @@ const PersonalPageScreen = ({ route, navigation }) => {
   const { user: currentUser, setUser: setUserContext } = useAuth();
   const { theme, isDarkMode } = useTheme();
   const socket = useSocket();
-
+  
   // Create dynamic styles based on theme (must be defined before any render helpers use it)
   const dynamicStyles = getStyles(theme, isDarkMode);
   
@@ -846,10 +847,28 @@ const PersonalPageScreen = ({ route, navigation }) => {
 
   if (loading && !user) {
     return (
-      <View style={[dynamicStyles.center, { backgroundColor: theme?.background }]}>
-        <ActivityIndicator size="large" color={theme?.primary || "#00B14F"} />
-        <Text style={[dynamicStyles.loadingText, { color: theme?.textSecondary }]}>Đang tải...</Text>
-      </View>
+      <ScrollView style={[dynamicStyles.container, { backgroundColor: theme?.background }]}>
+        <View style={dynamicStyles.pageContainer}>
+          {/* Profile Header Skeleton */}
+          <View style={[dynamicStyles.card, dynamicStyles.profileHeader]}>
+            <SkeletonBox width="100%" height={200} borderRadius={0} />
+            <View style={dynamicStyles.profileInfo}>
+              <SkeletonCircle size={100} style={{ marginTop: -50 }} />
+              <View style={{ marginTop: 12, alignItems: 'center', width: '100%' }}>
+                <SkeletonText width={150} height={24} />
+                <SkeletonText width={100} height={16} style={{ marginTop: 8 }} />
+              </View>
+            </View>
+          </View>
+          
+          {/* Posts Skeleton */}
+          <View style={[dynamicStyles.card, { marginTop: 12 }]}>
+            {[1, 2, 3].map((item) => (
+              <PostSkeleton key={item} />
+            ))}
+          </View>
+        </View>
+      </ScrollView>
     );
   }
 
@@ -1309,8 +1328,10 @@ const PersonalPageScreen = ({ route, navigation }) => {
         ) : (
           /* Posts List */
           loading ? (
-            <View style={[dynamicStyles.card, dynamicStyles.loadingContainer]}>
-              <ActivityIndicator size="large" color={theme?.primary || "#00B14F"} />
+            <View style={dynamicStyles.card}>
+              {[1, 2, 3].map((item) => (
+                <PostSkeleton key={item} />
+              ))}
             </View>
           ) : posts.length === 0 ? (
             <View style={[dynamicStyles.card, dynamicStyles.emptyContainer]}>

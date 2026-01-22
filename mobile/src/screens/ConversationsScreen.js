@@ -18,6 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useSocket } from '../context/SocketContext';
 import EmptyState from '../components/EmptyState';
 import StoryList from '../components/StoryList';
+import { ConversationSkeleton, SkeletonBox } from '../components/Skeleton';
 
 import { BASE_URL } from '../config/api';
 
@@ -201,9 +202,23 @@ const ConversationsScreen = () => {
   if (loading) {
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
-        <View style={styles.center}>
-          <Text style={{ color: theme.text }}>Đang tải...</Text>
+        {/* Search Header Skeleton */}
+        <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
+          <View style={[styles.searchInputContainer, { backgroundColor: theme.background }]}>
+            <SkeletonBox width="100%" height={40} borderRadius={10} />
+          </View>
         </View>
+        
+        {/* Conversations Skeleton */}
+        <FlatList
+          data={[1, 2, 3, 4, 5, 6]}
+          keyExtractor={(item) => String(item)}
+          renderItem={() => <ConversationSkeleton />}
+          ItemSeparatorComponent={() => (
+            <View style={[styles.separator, { backgroundColor: theme.border }]} />
+          )}
+          showsVerticalScrollIndicator={false}
+        />
       </View>
     );
   }

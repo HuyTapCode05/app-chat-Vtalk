@@ -7,16 +7,21 @@
 const rateLimit = require('express-rate-limit');
 const config = require('../config/config');
 
-// Rate limiting cho đăng ký/đăng nhập
+// Rate limiting cho đăng ký/đăng nhập (tối ưu cho concurrent access)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 20, // Tối đa 20 requests (tăng lên cho dev)
+  max: 50, // Tăng lên 50 requests để handle nhiều người login cùng lúc
   message: 'Quá nhiều lần thử. Vui lòng thử lại sau 15 phút.',
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: false, // Count all requests
   skip: (req) => {
     // Skip rate limit trong development
     return process.env.NODE_ENV === 'development';
+  },
+  // Custom key generator để tránh block theo IP khi nhiều người cùng network
+  keyGenerator: (req) => {
+    return req.body?.email || req.ip || req.connection.remoteAddress;
   },
 });
 

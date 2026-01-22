@@ -17,6 +17,7 @@ import { useSocket } from '../context/SocketContext';
 import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
 import ContactMenu from '../components/ContactMenu';
+import { ContactSkeleton, SkeletonBox } from '../components/Skeleton';
 import { getUserId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
 
 const ContactsScreen = ({ navigation, route }) => {
@@ -577,9 +578,12 @@ const ContactsScreen = ({ navigation, route }) => {
 
     if (loading) {
       return (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={theme?.primary} />
-        </View>
+        <FlatList
+          data={[1, 2, 3, 4, 5, 6]}
+          keyExtractor={(item) => String(item)}
+          renderItem={() => <ContactSkeleton />}
+          showsVerticalScrollIndicator={false}
+        />
       );
     }
 

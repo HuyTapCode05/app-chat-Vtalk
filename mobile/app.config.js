@@ -10,18 +10,35 @@ module.exports = {
     slug: "vtalk",
     scheme: "vtalk",
     projectId: "vtalk-demo-project",
+    // Deep linking configuration
+    intentFilters: [
+      {
+        action: "VIEW",
+        autoVerify: true,
+        data: [
+          {
+            scheme: "vtalk",
+            host: "*",
+          },
+        ],
+        category: ["BROWSABLE", "DEFAULT"],
+      },
+    ],
     version: "1.0.0",
     sdkVersion: "54.0.0",
     orientation: "portrait",
     userInterfaceStyle: "light",
     splash: {
+      image: "./assets/splash.png",
       resizeMode: "contain",
       backgroundColor: "#00B14F"
     },
+    icon: "./assets/icon.png",
     assetBundlePatterns: [
       "**/*"
     ],
     ios: {
+      icon: "./assets/icon.png",
       supportsTablet: true,
       bundleIdentifier: "com.vtalk.app",
       infoPlist: {
@@ -31,7 +48,9 @@ module.exports = {
     },
     android: {
       adaptiveIcon: {
-        backgroundColor: "#00B14F"
+        foregroundImage: "./assets/adaptive-icon.png",
+        backgroundColor: "#00B14F",
+        monochromeImage: "./assets/adaptive-icon.png"
       },
       package: "com.vtalk.app",
       permissions: [
@@ -43,9 +62,21 @@ module.exports = {
     plugins: [
       "expo-asset",
       "expo-audio",
-      "expo-dev-client"
-    ]
-    // Removed extra.eas.projectId to avoid notification UUID error
-    // Add back when using EAS services
+      "expo-dev-client",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/notification-icon.png",
+          color: "#00B14F",
+          sounds: ["./assets/notification-sound.wav"],
+        }
+      ]
+    ],
+    notification: {
+      icon: "./assets/notification-icon.png",
+      color: "#00B14F",
+      iosDisplayInForeground: true,
+      androidMode: "default",
+    }
   }
 };

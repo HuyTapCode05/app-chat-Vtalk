@@ -1,15 +1,23 @@
 const storage = require('../storage/dbStorage');
 const { getOtherParticipants, getCurrentTimestamp } = require('../utils/helpers');
+const { batchLoadUsers, batchPopulateMessages } = require('../utils/queryOptimizer');
+const { verifyConversationMember, verifyUserRoomAccess } = require('../middleware/socketAuth');
+const { notifyNewMessage, notifyIncomingCall } = require('../utils/pushNotification');
+const pushTokenStorage = require('../storage/pushTokenStorage');
+const eventThrottle = require('../utils/eventThrottle');
+const batchProcessor = require('../utils/batchProcessor');
+const sessionManager = require('../utils/sessionManager');
 
 /**
- * Populate message with sender data
+ * Populate message with sender data (optimized with batch loading)
  */
 const populateMessage = async (message) => {
   if (!message || !message.sender) return message;
   
   try {
-    const sender = await storage.users.findById(message.sender);
-    if (sender) {
+    const senders = await batchLoadUsers([message.sender]);
+    if (senders.length > 0) {
+      const sender = senders[0];
       return {
         ...message,
         sender: {
@@ -32,22 +40,77 @@ const populateMessage = async (message) => {
 const handleSocketConnection = (socket, io) => {
   console.log('✅ User connected:', socket.id);
 
-  // User joins their personal room
-  socket.on('join', async (userId) => {
+  // User joins their personal room (hỗ trợ multiple devices)
+  socket.on('join', async (data) => {
+    // Use authenticated userId from socket (from middleware)
+    const userId = socket.userId;
+    if (!userId) {
+      console.error('❌ Socket not authenticated');
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    // Verify user can access their own room
+    try {
+      await verifyUserRoomAccess(socket, userId);
+    } catch (error) {
+      socket.emit('error', { message: error.message });
+      return;
+    }
+
+    const deviceInfo = typeof data === 'object' ? {
+      platform: data.platform || 'unknown', // 'web', 'ios', 'android'
+      userAgent: data.userAgent || '',
+      deviceId: data.deviceId || socket.id
+    } : {
+      platform: 'unknown',
+      deviceId: socket.id
+    };
+
+    // Join user room
     socket.join(`user_${userId}`);
     
-    // Update user online status
-    await storage.users.updateOnlineStatus(userId, true);
+    // Track session (multiple devices support)
+    sessionManager.addSession(userId, socket.id, deviceInfo);
+    
+    const deviceCount = sessionManager.getDeviceCount(userId);
+    console.log(`👤 User ${userId} joined from ${deviceInfo.platform} (Total devices: ${deviceCount})`);
 
-    // Notify others
-    socket.broadcast.emit('user-online', { userId });
-    console.log(`User ${userId} joined`);
+    // Update user online status (only if first device)
+    if (deviceCount === 1) {
+      await storage.users.updateOnlineStatus(userId, true);
+      
+      // Notify others that user came online
+      socket.broadcast.emit('user-online', { userId });
+      console.log(`✅ User ${userId} is now online`);
+    } else {
+      // User already online from another device, just notify about new device
+      console.log(`📱 User ${userId} connected from additional device (${deviceInfo.platform})`);
+    }
+
+    // Notify user about their active devices
+    socket.emit('devices-updated', {
+      deviceCount,
+      devices: sessionManager.getUserDevices(userId)
+    });
   });
 
-  // User joins conversation room
-  socket.on('join-conversation', (conversationId) => {
-    socket.join(`conversation_${conversationId}`);
-    console.log(`User joined conversation ${conversationId}`);
+  // User joins conversation room (với verification)
+  socket.on('join-conversation', async (conversationId) => {
+    if (!socket.userId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    try {
+      // Verify user is member of conversation
+      await verifyConversationMember(socket, conversationId);
+      socket.join(`conversation_${conversationId}`);
+      console.log(`✅ User ${socket.userId} joined conversation ${conversationId}`);
+    } catch (error) {
+      console.warn(`⚠️ User ${socket.userId} tried to join conversation ${conversationId} without permission`);
+      socket.emit('error', { message: 'Not authorized to join this conversation' });
+    }
   });
 
   // Leave conversation room
@@ -69,11 +132,35 @@ const handleSocketConnection = (socket, io) => {
         return;
       }
 
+      // Use authenticated userId (more secure than trusting client)
+      const authenticatedUserId = socket.userId;
+      if (!authenticatedUserId) {
+        console.error('❌ Socket not authenticated');
+        socket.emit('error', { message: 'Not authenticated' });
+        return;
+      }
+
+      // Verify senderId matches authenticated user (prevent spoofing)
+      if (String(senderId) !== String(authenticatedUserId)) {
+        console.error('❌ Sender ID mismatch:', { senderId, authenticatedUserId });
+        socket.emit('error', { message: 'Sender ID does not match authenticated user' });
+        return;
+      }
+
       // Verify conversation exists and user is participant
       const conversation = await storage.conversations.findById(conversationId);
       if (!conversation) {
         console.error('❌ Conversation not found:', conversationId);
         socket.emit('error', { message: 'Conversation không tồn tại' });
+        return;
+      }
+
+      // Verify user is member of conversation
+      try {
+        await verifyConversationMember(socket, conversationId);
+      } catch (error) {
+        console.warn(`⚠️ User ${authenticatedUserId} tried to send message to conversation ${conversationId} without permission`);
+        socket.emit('error', { message: 'Not authorized to send messages to this conversation' });
         return;
       }
 
@@ -206,9 +293,8 @@ const handleSocketConnection = (socket, io) => {
       io.to(`conversation_${conversationId}`).emit('new-message', messageToEmit);
       console.log('📢 Emitted new-message to conversation room:', conversationId);
 
-      // Also emit to individual user rooms (for users not currently viewing)
-      // This ensures messages are received even if user hasn't joined conversation room
-      // Reuse otherParticipants already calculated above
+      // Also emit to individual user rooms (for ALL devices of each user)
+      // This ensures messages sync across all devices (web + mobile)
       console.log('📤 Sending to other participants:', otherParticipants);
       
       if (otherParticipants.length === 0) {
@@ -219,14 +305,38 @@ const handleSocketConnection = (socket, io) => {
         });
       }
       
-      otherParticipants.forEach(participantId => {
+      // Get push tokens for offline notifications
+      const pushTokens = await pushTokenStorage.getTokensByUserIds(otherParticipants);
+      
+      otherParticipants.forEach(async (participantId) => {
         if (participantId) {
-          io.to(`user_${participantId}`).emit('new-message', messageToEmit);
-          io.to(`user_${participantId}`).emit('conversation-updated', {
-            conversationId,
-            lastMessage: messageToEmit
-          });
-          console.log('📢 Emitted new-message to user room:', participantId);
+          // Send to ALL devices of this user (web + mobile)
+          const userSockets = sessionManager.getUserSockets(participantId);
+          
+          if (userSockets.length > 0) {
+            // User is online, send via socket
+            io.to(`user_${participantId}`).emit('new-message', messageToEmit);
+            io.to(`user_${participantId}`).emit('conversation-updated', {
+              conversationId,
+              lastMessage: messageToEmit,
+              lastMessageAt: new Date().toISOString()
+            });
+            console.log(`📢 Emitted to user ${participantId} (${userSockets.length} device(s))`);
+          } else {
+            // User is offline, send push notification
+            const tokens = pushTokens[participantId] || [];
+            if (tokens.length > 0) {
+              const sender = messageToEmit.sender;
+              const senderName = sender?.fullName || sender?.username || 'Ai đó';
+              
+              tokens.forEach(token => {
+                notifyNewMessage(messageToEmit, senderName, null, token).catch(err => {
+                  console.error('Error sending push notification:', err);
+                });
+              });
+              console.log(`📱 Sent push notification to user ${participantId} (${tokens.length} device(s))`);
+            }
+          }
         }
       });
 
@@ -239,31 +349,45 @@ const handleSocketConnection = (socket, io) => {
   // Typing indicator
   socket.on('typing', async (data) => {
     const { conversationId, userId, isTyping } = data;
-    // Emit to conversation room
-    socket.to(`conversation_${conversationId}`).emit('user-typing', {
-      conversationId,
-      userId,
-      isTyping
-    });
+    const authenticatedUserId = socket.userId;
     
-    // Also emit to individual user rooms if needed
-    try {
-      const conversation = await storage.conversations.findById(conversationId);
-      if (conversation) {
-        const participants = (conversation.participants || []).filter(p => p && p !== userId);
-        participants.forEach(participantId => {
-          if (participantId) {
-            io.to(`user_${participantId}`).emit('user-typing', {
-              conversationId,
-              userId,
-              isTyping
-            });
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error handling typing indicator:', error);
+    // Verify userId matches authenticated user
+    if (String(userId) !== String(authenticatedUserId)) {
+      return;
     }
+    
+    // Throttle typing indicator để tránh spam khi nhiều users
+    eventThrottle.throttle(`typing_${conversationId}_${userId}`, () => {
+      // Emit to conversation room
+      socket.to(`conversation_${conversationId}`).emit('user-typing', {
+        conversationId,
+        userId,
+        isTyping
+      });
+      
+      // Also emit to individual user rooms if needed
+      try {
+        const conversation = storage.conversations.findById(conversationId);
+        if (conversation) {
+          conversation.then(conv => {
+            if (conv) {
+              const participants = (conv.participants || []).filter(p => p && p !== userId);
+              participants.forEach(participantId => {
+                if (participantId) {
+                  io.to(`user_${participantId}`).emit('user-typing', {
+                    conversationId,
+                    userId,
+                    isTyping
+                  });
+                }
+              });
+            }
+          }).catch(err => console.error('Error in typing handler:', err));
+        }
+      } catch (error) {
+        console.error('Error handling typing indicator:', error);
+      }
+    }, 100); // Throttle 100ms - chỉ emit tối đa 10 lần/giây
   });
 
   // Mark message as read
@@ -285,7 +409,7 @@ const handleSocketConnection = (socket, io) => {
   });
 
   // Call handling
-  socket.on('call-request', (data) => {
+  socket.on('call-request', async (data) => {
     const { callId, fromUserId, toUserId, callType } = data;
     
     console.log(`📞 Call request: ${fromUserId} -> ${toUserId} (${callType})`);
@@ -298,14 +422,40 @@ const handleSocketConnection = (socket, io) => {
       });
       return;
     }
+
+    // Get recipient info for notification
+    const recipient = await storage.users.findById(toUserId);
+    const caller = await storage.users.findById(fromUserId);
+    const callerName = caller?.fullName || caller?.username || 'Ai đó';
     
-    // Notify the recipient
-    io.to(`user_${toUserId}`).emit('incoming-call', {
-      callId,
-      fromUserId,
-      callType,
-      timestamp: new Date().toISOString()
-    });
+    // Check if recipient is online
+    const recipientSockets = sessionManager.getUserSockets(toUserId);
+    
+    if (recipientSockets.length > 0) {
+      // User is online, send via socket
+      io.to(`user_${toUserId}`).emit('incoming-call', {
+        callId,
+        fromUserId,
+        callType,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      // User is offline, send push notification
+      const pushTokens = await pushTokenStorage.getTokensByUserId(toUserId);
+      if (pushTokens.length > 0) {
+        pushTokens.forEach(token => {
+          notifyIncomingCall({
+            callId,
+            fromUserId,
+            userName: callerName,
+            callType
+          }, token).catch(err => {
+            console.error('Error sending call push notification:', err);
+          });
+        });
+        console.log(`📱 Sent call push notification to user ${toUserId} (${pushTokens.length} device(s))`);
+      }
+    }
     
     // Also notify the caller that request was sent (optional)
     io.to(`user_${fromUserId}`).emit('call-request-sent', {
@@ -527,11 +677,90 @@ const handleSocketConnection = (socket, io) => {
   });
 
   // Handle disconnect
-  socket.on('disconnect', () => {
+  socket.on('disconnect', async () => {
     console.log('❌ User disconnected:', socket.id);
     
-    // Note: We don't update online status here because user might have multiple tabs
-    // Instead, update on explicit logout
+    // Remove session
+    const userId = sessionManager.removeSession(socket.id);
+    
+    if (userId) {
+      const remainingDevices = sessionManager.getDeviceCount(userId);
+      console.log(`📱 User ${userId} disconnected. Remaining devices: ${remainingDevices}`);
+      
+      // Only mark offline if no devices remain
+      if (remainingDevices === 0) {
+        await storage.users.updateOnlineStatus(userId, false);
+        
+        // Notify others that user went offline
+        socket.broadcast.emit('user-offline', { userId });
+        console.log(`✅ User ${userId} is now offline (all devices disconnected)`);
+      } else {
+        // User still has other devices connected
+        console.log(`📱 User ${userId} still has ${remainingDevices} active device(s)`);
+        
+        // Notify remaining devices about device count change
+        io.to(`user_${userId}`).emit('devices-updated', {
+          deviceCount: remainingDevices,
+          devices: sessionManager.getUserDevices(userId)
+        });
+      }
+    }
+  });
+
+  // Handle explicit logout from one device
+  socket.on('logout-device', async (data) => {
+    const userId = sessionManager.getUserFromSocket(socket.id);
+    if (!userId) return;
+
+    console.log(`🚪 User ${userId} logging out from device ${socket.id}`);
+    
+    // Remove this specific session
+    sessionManager.removeSession(socket.id);
+    
+    const remainingDevices = sessionManager.getDeviceCount(userId);
+    
+    // If this was the last device, mark offline
+    if (remainingDevices === 0) {
+      await storage.users.updateOnlineStatus(userId, false);
+      socket.broadcast.emit('user-offline', { userId });
+    } else {
+      // Notify other devices
+      io.to(`user_${userId}`).emit('devices-updated', {
+        deviceCount: remainingDevices,
+        devices: sessionManager.getUserDevices(userId)
+      });
+    }
+    
+    socket.emit('logout-success');
+    socket.disconnect();
+  });
+
+  // Handle logout from all devices
+  socket.on('logout-all-devices', async (data) => {
+    const userId = sessionManager.getUserFromSocket(socket.id);
+    if (!userId) return;
+
+    console.log(`🚪 User ${userId} logging out from ALL devices`);
+    
+    // Get all sockets for this user
+    const userSockets = sessionManager.getUserSockets(userId);
+    
+    // Disconnect all devices
+    userSockets.forEach(socketId => {
+      const userSocket = io.sockets.sockets.get(socketId);
+      if (userSocket) {
+        userSocket.emit('force-logout', { reason: 'Logged out from another device' });
+        userSocket.disconnect();
+      }
+      sessionManager.removeSession(socketId);
+    });
+    
+    // Mark offline
+    await storage.users.updateOnlineStatus(userId, false);
+    socket.broadcast.emit('user-offline', { userId });
+    
+    socket.emit('logout-all-success');
+    socket.disconnect();
   });
 };
 

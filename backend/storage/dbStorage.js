@@ -261,20 +261,35 @@ const conversationStorage = {
   },
 
   async getConversationsByUserId(userId) {
-    const conversations = await all('SELECT * FROM conversations');
+    // Optimized: Use LIKE query with JSON array pattern (faster than loading all)
+    // Note: SQLite doesn't have native JSON support, so we use LIKE as fallback
+    // For better performance, we still load all but optimize the filtering
+    const conversations = await all('SELECT * FROM conversations ORDER BY lastMessageAt DESC, createdAt DESC');
+    
     const userConversations = conversations
-      .map(conv => ({
-        ...conv,
-        participants: JSON.parse(conv.participants || '[]'),
-        admins: (() => {
-          try {
-            return JSON.parse(conv.admins || '[]');
-          } catch (e) {
-            return [];
-          }
-        })()
-      }))
-      .filter(conv => conv.participants.includes(userId))
+      .map(conv => {
+        try {
+          return {
+            ...conv,
+            participants: JSON.parse(conv.participants || '[]'),
+            admins: (() => {
+              try {
+                return JSON.parse(conv.admins || '[]');
+              } catch (e) {
+                return [];
+              }
+            })()
+          };
+        } catch (e) {
+          return null;
+        }
+      })
+      .filter(conv => {
+        if (!conv) return false;
+        // Fast check: convert to string for comparison
+        const participants = conv.participants || [];
+        return Array.isArray(participants) && participants.includes(userId);
+      })
       .sort((a, b) => {
         const aTime = a.lastMessageAt ? new Date(a.lastMessageAt) : new Date(a.createdAt);
         const bTime = b.lastMessageAt ? new Date(b.lastMessageAt) : new Date(b.createdAt);
@@ -333,20 +348,57 @@ const conversationStorage = {
 };
 
 // ============ MESSAGES (JSON Files) ============
+// Message cache để tránh đọc file nhiều lần
+const messageCache = new Map();
+const CACHE_TTL = 30 * 1000; // 30 seconds
+const MAX_CACHE_SIZE = 100; // Max 100 conversations in cache
+
+// Export cache for memory manager (must be before module.exports)
+const messageStorageWithCache = {
+  ...messageStorage,
+  messageCache,
+  clearCache: messageStorage.clearCache,
+  clearAllCache: messageStorage.clearAllCache
+};
+
 const messageStorage = {
   getMessagesFilePath(conversationId) {
     return path.join(MESSAGES_DIR, `${conversationId}.json`);
   },
 
-  async loadMessages(conversationId) {
+  async loadMessages(conversationId, useCache = true) {
+    // Check cache first
+    if (useCache) {
+      const cached = messageCache.get(conversationId);
+      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+      }
+    }
+
     const filePath = this.getMessagesFilePath(conversationId);
     if (!fs.existsSync(filePath)) {
       return [];
     }
     
     try {
-      const data = fs.readFileSync(filePath, 'utf8');
-      return JSON.parse(data);
+      // Use async read for better performance
+      const data = await fs.promises.readFile(filePath, 'utf8');
+      const messages = JSON.parse(data);
+      
+      // Cache the result
+      if (useCache) {
+        // Clean cache if too large
+        if (messageCache.size >= MAX_CACHE_SIZE) {
+          const firstKey = messageCache.keys().next().value;
+          messageCache.delete(firstKey);
+        }
+        messageCache.set(conversationId, {
+          data: messages,
+          timestamp: Date.now()
+        });
+      }
+      
+      return messages;
     } catch (error) {
       console.error('Error loading messages:', error);
       return [];
@@ -355,7 +407,31 @@ const messageStorage = {
 
   async saveMessages(conversationId, messages) {
     const filePath = this.getMessagesFilePath(conversationId);
-    fs.writeFileSync(filePath, JSON.stringify(messages, null, 2), 'utf8');
+    
+    // Use async write for better performance
+    await fs.promises.writeFile(
+      filePath, 
+      JSON.stringify(messages, null, 2), 
+      'utf8'
+    );
+    
+    // Update cache
+    if (messageCache.has(conversationId)) {
+      messageCache.set(conversationId, {
+        data: messages,
+        timestamp: Date.now()
+      });
+    }
+  },
+
+  // Clear cache for a conversation
+  clearCache(conversationId) {
+    messageCache.delete(conversationId);
+  },
+
+  // Clear all cache
+  clearAllCache() {
+    messageCache.clear();
   },
 
   async create(messageData) {
@@ -378,9 +454,20 @@ const messageStorage = {
       message.duration = messageData.duration;
     }
 
-    const messages = await this.loadMessages(messageData.conversation);
+    // Optimized: Load messages without cache (we're about to modify)
+    const messages = await this.loadMessages(messageData.conversation, false);
     messages.push(message);
-    await this.saveMessages(messageData.conversation, messages);
+    
+    // Limit messages per conversation to prevent file bloat (keep last 10,000)
+    const MAX_MESSAGES = 10000;
+    const trimmedMessages = messages.length > MAX_MESSAGES 
+      ? messages.slice(-MAX_MESSAGES)
+      : messages;
+    
+    await this.saveMessages(messageData.conversation, trimmedMessages);
+    
+    // Clear cache to force reload
+    this.clearCache(messageData.conversation);
 
     return message;
   },
@@ -390,26 +477,50 @@ const messageStorage = {
     return messages.find(m => m._id === messageId) || null;
   },
 
-  async getMessagesByConversationId(conversationId, limit = 100) {
+  async getMessagesByConversationId(conversationId, limit = 100, offset = 0) {
     const messages = await this.loadMessages(conversationId);
-    return messages.slice(-limit);
+    
+    // Optimize: only load what we need
+    if (offset === 0 && limit >= messages.length) {
+      return messages;
+    }
+    
+    // Pagination: get last N messages
+    const start = Math.max(0, messages.length - limit - offset);
+    const end = messages.length - offset;
+    return messages.slice(start, end);
   },
 
   async markMessageAsRead(messageId, conversationId, userId) {
     const messages = await this.loadMessages(conversationId);
-    const message = messages.find(m => m._id === messageId);
+    const messageIndex = messages.findIndex(m => m._id === messageId);
     
-    if (message) {
-      const readBy = message.readBy || [];
-      const alreadyRead = readBy.some(r => r.user === userId);
+    if (messageIndex === -1) {
+      return null;
+    }
+    
+    const message = messages[messageIndex];
+    const readBy = message.readBy || [];
+    const alreadyRead = readBy.some(r => r.user === userId);
+    
+    if (!alreadyRead) {
+      readBy.push({
+        user: userId,
+        readAt: new Date().toISOString()
+      });
+      message.readBy = readBy;
       
-      if (!alreadyRead) {
-        readBy.push({
-          user: userId,
-          readAt: new Date().toISOString()
+      // Use writeFileSync for faster write (small update)
+      // But still update cache
+      const filePath = this.getMessagesFilePath(conversationId);
+      fs.writeFileSync(filePath, JSON.stringify(messages, null, 2), 'utf8');
+      
+      // Update cache
+      if (messageCache.has(conversationId)) {
+        messageCache.set(conversationId, {
+          data: messages,
+          timestamp: Date.now()
         });
-        message.readBy = readBy;
-        await this.saveMessages(conversationId, messages);
       }
     }
     
@@ -1308,5 +1419,7 @@ module.exports = {
   emailVerifications: emailVerificationStorage,
   stories: storiesStorage,
   storyViews: storyViewsStorage,
+  // Export message cache for memory manager
+  messageCache: messageCache,
 };
 

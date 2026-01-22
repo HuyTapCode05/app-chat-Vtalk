@@ -8,6 +8,9 @@ const storage = require('../storage/dbStorage');
 const auth = require('../middleware/auth');
 const { authLimiter } = require('../middleware/security');
 const { sendOTPEmail, sendVerificationLinkEmail } = require('../utils/emailService');
+const { loginQueue, registerQueue } = require('../utils/requestQueue');
+const { getCached, setCached } = require('../utils/queryOptimizer');
+const sessionManager = require('../utils/sessionManager');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -17,7 +20,7 @@ const generateToken = (userId) => {
 };
 
 // @route   POST /api/auth/register
-// @desc    Đăng ký user mới
+// @desc    Đăng ký user mới (tối ưu với queue)
 // @access  Public
 router.post('/register', authLimiter, [
   body('username').trim().isLength({ min: 3 }).withMessage('Username phải có ít nhất 3 ký tự'),
@@ -45,119 +48,144 @@ router.post('/register', authLimiter, [
 
     const { username, email, password, fullName } = req.body;
 
-    // Check if user exists
-    console.log('🔍 Checking existing users...');
-    const existingByEmail = await storage.users.findByEmail(email);
-    const existingByUsername = await storage.users.findByUsername(username);
+    // Queue register request để tránh overload
+    const result = await registerQueue.add(async () => {
+      // Check if user exists (with caching)
+      console.log('🔍 Checking existing users...');
+      const emailCacheKey = `user_email_${email}`;
+      const usernameCacheKey = `user_username_${username}`;
+      
+      let existingByEmail = getCached(emailCacheKey);
+      let existingByUsername = getCached(usernameCacheKey);
+      
+      if (!existingByEmail) {
+        existingByEmail = await storage.users.findByEmail(email);
+        if (existingByEmail) setCached(emailCacheKey, existingByEmail);
+      }
+      
+      if (!existingByUsername) {
+        existingByUsername = await storage.users.findByUsername(username);
+        if (existingByUsername) setCached(usernameCacheKey, existingByUsername);
+      }
+      
+      if (existingByEmail) {
+        console.log('❌ Email already exists');
+        throw new Error('EMAIL_EXISTS');
+      }
+      if (existingByUsername) {
+        console.log('❌ Username already exists');
+        throw new Error('USERNAME_EXISTS');
+      }
+
+      // Hash password
+      console.log('🔐 Hashing password...');
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Create user (unverified by default)
+      console.log('👤 Creating user...');
+      const user = await storage.users.create({
+        username,
+        email,
+        password: hashedPassword,
+        fullName,
+        avatar: '',
+        isOnline: false,
+        lastSeen: new Date().toISOString(),
+        emailVerified: 0, // Not verified yet
+      });
+
+      if (!user || !user.id) {
+        console.error('❌ User creation failed - no user returned');
+        throw new Error('USER_CREATION_FAILED');
+      }
+
+      console.log('✅ User created:', user.id);
+
+      // Generate OTP (6 digits)
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Generate verification token (for link verification)
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+
+      // Save OTP verification record (expires in 10 minutes)
+      const otpExpiresAt = new Date();
+      otpExpiresAt.setMinutes(otpExpiresAt.getMinutes() + 10);
+
+      await storage.emailVerifications.create({
+        userId: user.id,
+        email: user.email,
+        code: otpCode,
+        token: null,
+        type: 'otp',
+        expiresAt: otpExpiresAt.toISOString(),
+      });
+
+      // Save link verification record (expires in 24 hours)
+      const linkExpiresAt = new Date();
+      linkExpiresAt.setHours(linkExpiresAt.getHours() + 24);
+
+      await storage.emailVerifications.create({
+        userId: user.id,
+        email: user.email,
+        code: null,
+        token: verificationToken,
+        type: 'link',
+        expiresAt: linkExpiresAt.toISOString(),
+      });
+
+      // Send emails asynchronously (non-blocking)
+      Promise.all([
+        sendOTPEmail(user.email, otpCode, user.fullName).catch(err => {
+          console.error('⚠️ Failed to send OTP email:', err);
+        }),
+        sendVerificationLinkEmail(user.email, verificationToken, user.fullName).catch(err => {
+          console.error('⚠️ Failed to send verification link email:', err);
+        })
+      ]).then(() => {
+        console.log('✅ Verification emails sent to:', user.email);
+      });
+
+      // Generate token (user can login but email not verified)
+      const token = generateToken(user.id);
+
+      return {
+        message: 'Đăng ký thành công. Vui lòng xác thực email.',
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName,
+          avatar: user.avatar,
+          emailVerified: false,
+        },
+        requiresVerification: true,
+        verificationMethod: 'otp',
+      };
+    }, 1); // High priority for registration
+
+    res.status(201).json(result);
+  } catch (error) {
+    console.error('Register error:', error);
     
-    if (existingByEmail) {
-      console.log('❌ Email already exists');
+    if (error.message === 'EMAIL_EXISTS') {
       return res.status(400).json({ 
         message: 'Email đã được sử dụng. Bạn có muốn đăng nhập không?',
         code: 'EMAIL_EXISTS'
       });
     }
-    if (existingByUsername) {
-      console.log('❌ Username already exists');
+    
+    if (error.message === 'USERNAME_EXISTS') {
       return res.status(400).json({ 
         message: 'Username đã được sử dụng. Vui lòng chọn username khác.',
         code: 'USERNAME_EXISTS'
       });
     }
-
-    // Hash password
-    console.log('🔐 Hashing password...');
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user (unverified by default)
-    console.log('👤 Creating user...');
-    const user = await storage.users.create({
-      username,
-      email,
-      password: hashedPassword,
-      fullName,
-      avatar: '',
-      isOnline: false,
-      lastSeen: new Date().toISOString(),
-      emailVerified: 0, // Not verified yet
-    });
-
-    if (!user || !user.id) {
-      console.error('❌ User creation failed - no user returned');
+    
+    if (error.message === 'USER_CREATION_FAILED') {
       return res.status(500).json({ message: 'Không thể tạo tài khoản. Vui lòng thử lại.' });
     }
-
-    console.log('✅ User created:', user.id);
-
-    // Generate OTP (6 digits)
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
     
-    // Generate verification token (for link verification)
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-
-    // Save OTP verification record (expires in 10 minutes)
-    const otpExpiresAt = new Date();
-    otpExpiresAt.setMinutes(otpExpiresAt.getMinutes() + 10);
-
-    await storage.emailVerifications.create({
-      userId: user.id,
-      email: user.email,
-      code: otpCode,
-      token: null,
-      type: 'otp',
-      expiresAt: otpExpiresAt.toISOString(),
-    });
-
-    // Save link verification record (expires in 24 hours)
-    const linkExpiresAt = new Date();
-    linkExpiresAt.setHours(linkExpiresAt.getHours() + 24);
-
-    await storage.emailVerifications.create({
-      userId: user.id,
-      email: user.email,
-      code: null,
-      token: verificationToken,
-      type: 'link',
-      expiresAt: linkExpiresAt.toISOString(),
-    });
-
-    // Send OTP email
-    try {
-      await sendOTPEmail(user.email, otpCode, user.fullName);
-      console.log('✅ OTP email sent to:', user.email);
-    } catch (emailError) {
-      console.error('⚠️ Failed to send OTP email:', emailError);
-      // Continue anyway - user can request resend
-    }
-
-    // Send verification link email
-    try {
-      await sendVerificationLinkEmail(user.email, verificationToken, user.fullName);
-      console.log('✅ Verification link email sent to:', user.email);
-    } catch (emailError) {
-      console.error('⚠️ Failed to send verification link email:', emailError);
-      // Continue anyway
-    }
-
-    // Generate token (user can login but email not verified)
-    const token = generateToken(user.id);
-
-    res.status(201).json({
-      message: 'Đăng ký thành công. Vui lòng xác thực email.',
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        fullName: user.fullName,
-        avatar: user.avatar,
-        emailVerified: false,
-      },
-      requiresVerification: true,
-      verificationMethod: 'otp', // or 'link'
-    });
-  } catch (error) {
-    console.error('Register error:', error);
     const errorMessage = error.message || 'Lỗi server';
     res.status(500).json({ 
       message: errorMessage.includes('UNIQUE constraint') 
@@ -168,7 +196,7 @@ router.post('/register', authLimiter, [
 });
 
 // @route   POST /api/auth/login
-// @desc    Đăng nhập user
+// @desc    Đăng nhập user (tối ưu với queue và caching)
 // @access  Public
 router.post('/login', authLimiter, [
   body('email').isEmail().withMessage('Email không hợp lệ'),
@@ -186,47 +214,87 @@ router.post('/login', authLimiter, [
 
     const { email, password } = req.body;
 
-    // Find user with password
-    const userWithPassword = await storage.users.findByEmail(email);
-    if (!userWithPassword) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng' });
-    }
+    // Queue login request để tránh overload
+    const result = await loginQueue.add(async () => {
+      // Check cache first (for failed attempts protection)
+      const cacheKey = `login_attempt_${email}`;
+      const cachedAttempt = getCached(cacheKey);
+      if (cachedAttempt && cachedAttempt.failed) {
+        // If recent failed attempt, add small delay to prevent brute force
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
-    // Get password from database
-    const dbPassword = await storage.users.getPassword(userWithPassword.id);
-    
-    if (!dbPassword) {
-      console.error('Password not found for user:', userWithPassword.id);
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng' });
-    }
-    
-    // Check password
-    const isMatch = await bcrypt.compare(password, dbPassword);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng' });
-    }
+      // Find user with password (cached if possible)
+      const userCacheKey = `user_email_${email}`;
+      let userWithPassword = getCached(userCacheKey);
+      
+      if (!userWithPassword) {
+        userWithPassword = await storage.users.findByEmail(email);
+        if (userWithPassword) {
+          // Cache user for 30 seconds
+          setCached(userCacheKey, userWithPassword);
+        }
+      }
 
-    // Update online status
-    await storage.users.updateOnlineStatus(userWithPassword.id, true);
-    const user = await storage.users.findById(userWithPassword.id);
+      if (!userWithPassword) {
+        // Cache failed attempt for 1 minute
+        setCached(cacheKey, { failed: true }, 60000);
+        throw new Error('EMAIL_NOT_FOUND');
+      }
 
-    const token = generateToken(user.id);
+      // Get password from database
+      const dbPassword = await storage.users.getPassword(userWithPassword.id);
+      
+      if (!dbPassword) {
+        console.error('Password not found for user:', userWithPassword.id);
+        setCached(cacheKey, { failed: true }, 60000);
+        throw new Error('PASSWORD_NOT_FOUND');
+      }
+      
+      // Check password
+      const isMatch = await bcrypt.compare(password, dbPassword);
+      if (!isMatch) {
+        setCached(cacheKey, { failed: true }, 60000);
+        throw new Error('PASSWORD_MISMATCH');
+      }
 
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        fullName: user.fullName,
-        avatar: user.avatar,
-        isOnline: user.isOnline,
-        // Ensure client knows email verification status
-        emailVerified: !!user.emailVerified,
-      },
-    });
+      // Clear failed attempt cache
+      getCached(cacheKey); // This will delete it
+
+      // Update online status only if user doesn't have active sessions
+      // (to support multiple devices)
+      const hasActiveSessions = sessionManager.hasActiveSessions(userWithPassword.id);
+      if (!hasActiveSessions) {
+        storage.users.updateOnlineStatus(userWithPassword.id, true).catch(err => {
+          console.error('Error updating online status:', err);
+        });
+      }
+
+      const user = await storage.users.findById(userWithPassword.id);
+      const token = generateToken(user.id);
+
+      return {
+        token,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          fullName: user.fullName,
+          avatar: user.avatar,
+          isOnline: user.isOnline,
+          emailVerified: !!user.emailVerified,
+        },
+      };
+    }, 1); // High priority for login
+
+    res.json(result);
   } catch (error) {
     console.error('Login error:', error);
+    
+    if (error.message === 'EMAIL_NOT_FOUND' || error.message === 'PASSWORD_NOT_FOUND' || error.message === 'PASSWORD_MISMATCH') {
+      return res.status(400).json({ message: 'Email hoặc mật khẩu không đúng' });
+    }
+    
     res.status(500).json({ 
       message: error.message || 'Lỗi server. Vui lòng thử lại.'
     });
@@ -257,12 +325,71 @@ router.get('/me', auth, async (req, res) => {
 });
 
 // @route   POST /api/auth/logout
-// @desc    Đăng xuất
+// @desc    Đăng xuất (từ device hiện tại)
 // @access  Private
 router.post('/logout', auth, async (req, res) => {
   try {
-    await storage.users.updateOnlineStatus(req.user.id, false);
-    res.json({ message: 'Đăng xuất thành công' });
+    const { logoutAll = false } = req.body;
+    const userId = req.user.id;
+    const sessionManager = require('../utils/sessionManager');
+    
+    if (logoutAll) {
+      // Logout từ tất cả devices
+      const userSockets = sessionManager.getUserSockets(userId);
+      
+      // Emit logout event to all devices via Socket.IO
+      const io = require('../routes/users').getIO?.();
+      if (io) {
+        userSockets.forEach(socketId => {
+          const socket = io.sockets.sockets.get(socketId);
+          if (socket) {
+            socket.emit('force-logout', { reason: 'Logged out from another device' });
+            socket.disconnect();
+          }
+          sessionManager.removeSession(socketId);
+        });
+      }
+      
+      await storage.users.updateOnlineStatus(userId, false);
+      res.json({ message: 'Đã đăng xuất khỏi tất cả thiết bị' });
+    } else {
+      // Logout chỉ từ device hiện tại (REST API call)
+      // Socket.IO sẽ handle disconnect event
+      const deviceCount = sessionManager.getDeviceCount(userId);
+      
+      if (deviceCount <= 1) {
+        // Last device, mark offline
+        await storage.users.updateOnlineStatus(userId, false);
+      }
+      
+      res.json({ 
+        message: 'Đăng xuất thành công',
+        remainingDevices: Math.max(0, deviceCount - 1)
+      });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
+});
+
+// @route   GET /api/auth/devices
+// @desc    Lấy danh sách devices đang đăng nhập
+// @access  Private
+router.get('/devices', auth, async (req, res) => {
+  try {
+    const sessionManager = require('../utils/sessionManager');
+    const devices = sessionManager.getUserDevices(req.user.id);
+    
+    res.json({
+      devices: devices.map(device => ({
+        platform: device.platform,
+        connectedAt: device.connectedAt,
+        lastSeen: device.lastSeen,
+        deviceId: device.deviceId
+      })),
+      deviceCount: devices.length
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Lỗi server' });

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import Constants from 'expo-constants';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SOCKET_CONFIG } from '../utils/env';
 import { logger } from '../utils/logger';
 
@@ -37,6 +38,9 @@ export const SocketProvider = ({ children }) => {
     }
 
     try {
+      // Get token for authentication
+      const token = await AsyncStorage.getItem('@vtalk:token');
+      
       const newSocket = io(SOCKET_URL, {
         transports: ['polling', 'websocket'], // Try polling first for better web compatibility
         upgrade: true, // Allow upgrade from polling to websocket
@@ -48,12 +52,25 @@ export const SocketProvider = ({ children }) => {
         timeout: 20000,
         forceNew: false, // Reuse existing connection if available
         autoConnect: true,
+        // Send token in handshake for authentication
+        auth: {
+          token: token
+        },
+        query: {
+          token: token // Fallback for older clients
+        }
       });
 
       newSocket.on('connect', () => {
         console.log('✅ Connected to server');
         if (user?.id) {
-          newSocket.emit('join', user.id);
+          // Send join với device info
+          newSocket.emit('join', {
+            userId: user.id,
+            platform: Constants.platform?.ios ? 'ios' : Constants.platform?.android ? 'android' : 'web',
+            userAgent: Constants.platform?.web ? navigator?.userAgent : undefined,
+            deviceId: Constants.installationId || Constants.deviceId
+          });
         }
       });
 

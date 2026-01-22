@@ -11,7 +11,10 @@ class ReadReceiptBatch {
     batchProcessor.add(this.batchKey, null, async (items) => {
       const processed = new Set();
       
-      for (const item of items) {
+      // Filter out null/undefined items
+      const validItems = items.filter(item => item && item.conversationId && item.messageId && item.userId);
+      
+      for (const item of validItems) {
         const key = `${item.conversationId}_${item.messageId}_${item.userId}`;
         if (processed.has(key)) continue;
         processed.add(key);
@@ -27,7 +30,9 @@ class ReadReceiptBatch {
         }
       }
 
-      console.log(`✅ Processed ${processed.size} read receipts in batch`);
+      if (processed.size > 0) {
+        console.log(`✅ Processed ${processed.size} read receipts in batch`);
+      }
     });
   }
 

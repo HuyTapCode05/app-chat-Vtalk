@@ -15,7 +15,16 @@ class BatchProcessor {
     }
 
     const batch = this.batches.get(batchKey);
-    batch.items.push(item);
+    
+    // Set processor if provided
+    if (processor) {
+      batch.processor = processor;
+    }
+    
+    // Only add item if it's not null/undefined
+    if (item !== null && item !== undefined) {
+      batch.items.push(item);
+    }
 
     if (batch.items.length >= this.batchSize) {
       this.processBatch(batchKey);

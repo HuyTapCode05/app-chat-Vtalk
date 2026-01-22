@@ -353,14 +353,6 @@ const messageCache = new Map();
 const CACHE_TTL = 30 * 1000; // 30 seconds
 const MAX_CACHE_SIZE = 100; // Max 100 conversations in cache
 
-// Export cache for memory manager (must be before module.exports)
-const messageStorageWithCache = {
-  ...messageStorage,
-  messageCache,
-  clearCache: messageStorage.clearCache,
-  clearAllCache: messageStorage.clearAllCache
-};
-
 const messageStorage = {
   getMessagesFilePath(conversationId) {
     return path.join(MESSAGES_DIR, `${conversationId}.json`);

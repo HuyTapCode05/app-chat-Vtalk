@@ -99,6 +99,45 @@ const initDatabase = () => {
         }
       });
 
+      // Stories table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS stories (
+          id TEXT PRIMARY KEY,
+          userId TEXT NOT NULL,
+          type TEXT NOT NULL,
+          content TEXT,
+          mediaUrl TEXT,
+          backgroundColor TEXT,
+          textColor TEXT,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          expiresAt DATETIME NOT NULL,
+          FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+        )
+      `, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      // Story views table
+      db.run(`
+        CREATE TABLE IF NOT EXISTS story_views (
+          id TEXT PRIMARY KEY,
+          storyId TEXT NOT NULL,
+          viewerId TEXT NOT NULL,
+          viewedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (storyId) REFERENCES stories(id) ON DELETE CASCADE,
+          FOREIGN KEY (viewerId) REFERENCES users(id) ON DELETE CASCADE,
+          UNIQUE(storyId, viewerId)
+        )
+      `, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
       // Conversations table
       db.run(`
         CREATE TABLE IF NOT EXISTS conversations (
@@ -445,6 +484,20 @@ const initDatabase = () => {
       });
 
       db.run(`CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_stories_userId_expiresAt ON stories(userId, expiresAt)`, (err) => {
+        if (err && !errorOccurred) {
+          errorOccurred = true;
+          reject(err);
+        }
+      });
+
+      db.run(`CREATE INDEX IF NOT EXISTS idx_story_views_storyId ON story_views(storyId)`, (err) => {
         if (err && !errorOccurred) {
           errorOccurred = true;
           reject(err);

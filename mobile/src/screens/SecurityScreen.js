@@ -10,11 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
 
 const SecurityScreen = ({ navigation }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -52,45 +54,48 @@ const SecurityScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Đổi mật khẩu</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Đổi mật khẩu</Text>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Mật khẩu hiện tại</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Mật khẩu hiện tại</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
             value={currentPassword}
             onChangeText={setCurrentPassword}
             placeholder="Nhập mật khẩu hiện tại"
+            placeholderTextColor={theme.placeholder}
             secureTextEntry
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Mật khẩu mới</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Mật khẩu mới</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
             value={newPassword}
             onChangeText={setNewPassword}
             placeholder="Nhập mật khẩu mới"
+            placeholderTextColor={theme.placeholder}
             secureTextEntry
           />
         </View>
 
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Xác nhận mật khẩu mới</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             placeholder="Nhập lại mật khẩu mới"
+            placeholderTextColor={theme.placeholder}
             secureTextEntry
           />
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+          style={[styles.saveButton, { backgroundColor: theme.primary }, loading && styles.saveButtonDisabled]}
           onPress={handleChangePassword}
           disabled={loading}
         >
@@ -102,29 +107,29 @@ const SecurityScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bảo mật khác</Text>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Bảo mật khác</Text>
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="lock-closed-outline" size={24} color="#00B14F" />
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]}>
+          <Ionicons name="lock-closed-outline" size={24} color={theme.primary} />
           <View style={styles.menuText}>
-            <Text style={styles.menuLabel}>Khóa ứng dụng</Text>
-            <Text style={styles.menuDescription}>
+            <Text style={[styles.menuLabel, { color: theme.text }]}>Khóa ứng dụng</Text>
+            <Text style={[styles.menuDescription, { color: theme.textSecondary }]}>
               Yêu cầu mật khẩu khi mở app
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="finger-print-outline" size={24} color="#00B14F" />
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]}>
+          <Ionicons name="finger-print-outline" size={24} color={theme.primary} />
           <View style={styles.menuText}>
-            <Text style={styles.menuLabel}>Xác thực sinh trắc học</Text>
-            <Text style={styles.menuDescription}>
+            <Text style={[styles.menuLabel, { color: theme.text }]}>Xác thực sinh trắc học</Text>
+            <Text style={[styles.menuDescription, { color: theme.textSecondary }]}>
               Sử dụng vân tay/Face ID
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -134,17 +139,14 @@ const SecurityScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   section: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   inputGroup: {
@@ -152,19 +154,15 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
   },
   saveButton: {
-    backgroundColor: '#00B14F',
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
@@ -183,7 +181,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   menuText: {
     flex: 1,
@@ -191,12 +188,10 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: 16,
-    color: '#333',
     marginBottom: 4,
   },
   menuDescription: {
     fontSize: 14,
-    color: '#666',
   },
 });
 

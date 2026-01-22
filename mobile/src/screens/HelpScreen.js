@@ -8,8 +8,10 @@ import {
   Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const HelpScreen = ({ navigation }) => {
+  const { theme } = useTheme();
   const handleContact = () => {
     Linking.openURL('mailto:support@zaloclone.com');
   };
@@ -34,34 +36,34 @@ const HelpScreen = ({ navigation }) => {
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Câu hỏi thường gặp</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Câu hỏi thường gặp</Text>
         
         {faqs.map((faq, index) => (
-          <View key={index} style={styles.faqItem}>
-            <Text style={styles.faqQuestion}>{faq.question}</Text>
-            <Text style={styles.faqAnswer}>{faq.answer}</Text>
+          <View key={index} style={[styles.faqItem, { borderBottomColor: theme.divider }]}>
+            <Text style={[styles.faqQuestion, { color: theme.text }]}>{faq.question}</Text>
+            <Text style={[styles.faqAnswer, { color: theme.textSecondary }]}>{faq.answer}</Text>
           </View>
         ))}
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Liên hệ hỗ trợ</Text>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text }]}>Liên hệ hỗ trợ</Text>
         
         <TouchableOpacity style={styles.contactItem} onPress={handleContact}>
-          <Ionicons name="mail-outline" size={24} color="#00B14F" />
+          <Ionicons name="mail-outline" size={24} color={theme.primary} />
           <View style={styles.contactText}>
-            <Text style={styles.contactLabel}>Email hỗ trợ</Text>
-            <Text style={styles.contactValue}>support@zaloclone.com</Text>
+            <Text style={[styles.contactLabel, { color: theme.textSecondary }]}>Email hỗ trợ</Text>
+            <Text style={[styles.contactValue, { color: theme.primary }]}>support@zaloclone.com</Text>
           </View>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.version}>Phiên bản 1.0.0</Text>
-        <Text style={styles.copyright}>© 2024 VTalk. All rights reserved.</Text>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.version, { color: theme.textSecondary }]}>Phiên bản 1.0.0</Text>
+        <Text style={[styles.copyright, { color: theme.textMuted }]}>© 2024 VTalk. All rights reserved.</Text>
       </View>
     </ScrollView>
   );
@@ -70,34 +72,28 @@ const HelpScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   section: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   faqItem: {
     marginBottom: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   faqQuestion: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   faqAnswer: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
   },
   contactItem: {
@@ -111,22 +107,18 @@ const styles = StyleSheet.create({
   },
   contactLabel: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 4,
   },
   contactValue: {
     fontSize: 16,
-    color: '#00B14F',
   },
   version: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
     marginBottom: 8,
   },
   copyright: {
     fontSize: 12,
-    color: '#ccc',
     textAlign: 'center',
   },
 });

@@ -303,7 +303,10 @@ const ContactsScreen = ({ navigation, route }) => {
     if (!requestId) return null;
 
     return (
-      <View style={styles.contactItem}>
+      <View style={[
+        styles.contactItem,
+        { backgroundColor: theme?.card, borderBottomColor: theme?.divider }
+      ]}>
         <TouchableOpacity
           style={styles.contactContent}
           onPress={() => {
@@ -327,13 +330,13 @@ const ContactsScreen = ({ navigation, route }) => {
             {requestUser.isOnline && <View style={styles.onlineBadge} />}
           </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactName}>
+            <Text style={[styles.contactName, { color: theme?.text }]}>
               {nicknames[userId] || requestUser.fullName || 'User'}
             </Text>
             {nicknames[userId] && (
-              <Text style={styles.contactSubtext}>{requestUser.fullName}</Text>
+              <Text style={[styles.contactSubtext, { color: theme?.textSecondary }]}>{requestUser.fullName}</Text>
             )}
-            <Text style={styles.contactStatus}>Đã gửi lời mời kết bạn</Text>
+            <Text style={[styles.contactStatus, { color: theme?.textSecondary }]}>Đã gửi lời mời kết bạn</Text>
           </View>
         </TouchableOpacity>
         <View style={styles.actionButtons}>
@@ -361,7 +364,10 @@ const ContactsScreen = ({ navigation, route }) => {
     if (!userId) return null;
     
     return (
-      <View style={styles.contactItem}>
+      <View style={[
+        styles.contactItem,
+        { backgroundColor: theme?.card, borderBottomColor: theme?.divider }
+      ]}>
         <TouchableOpacity
           style={styles.contactContent}
           onPress={() => {
@@ -378,13 +384,13 @@ const ContactsScreen = ({ navigation, route }) => {
             {item.isOnline && <View style={styles.onlineBadge} />}
           </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactName}>
+            <Text style={[styles.contactName, { color: theme?.text }]}>
               {nicknames[userId] || item.fullName || 'User'}
             </Text>
             {nicknames[userId] && (
-              <Text style={styles.contactSubtext}>{item.fullName}</Text>
+              <Text style={[styles.contactSubtext, { color: theme?.textSecondary }]}>{item.fullName}</Text>
             )}
-            <Text style={styles.contactStatus}>
+            <Text style={[styles.contactStatus, { color: theme?.textSecondary }]}>
               {item.isOnline ? 'Đang hoạt động' : 'Offline'}
             </Text>
           </View>
@@ -405,7 +411,7 @@ const ContactsScreen = ({ navigation, route }) => {
               });
             }}
           >
-            <Ionicons name="call" size={22} color="#00B14F" />
+            <Ionicons name="call" size={22} color={theme?.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
@@ -422,13 +428,13 @@ const ContactsScreen = ({ navigation, route }) => {
               });
             }}
           >
-            <Ionicons name="videocam" size={22} color="#00B14F" />
+            <Ionicons name="videocam" size={22} color={theme?.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigation.navigate('PersonalPage', { userId })}
           >
-            <Ionicons name="person-circle-outline" size={22} color="#00B14F" />
+            <Ionicons name="person-circle-outline" size={22} color={theme?.primary} />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
@@ -437,7 +443,7 @@ const ContactsScreen = ({ navigation, route }) => {
               setMenuVisible(true);
             }}
           >
-            <Ionicons name="ellipsis-vertical" size={22} color="#00B14F" />
+            <Ionicons name="ellipsis-vertical" size={22} color={theme?.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -451,7 +457,10 @@ const ContactsScreen = ({ navigation, route }) => {
     
     return (
       <TouchableOpacity
-        style={styles.contactItem}
+        style={[
+          styles.contactItem,
+          { backgroundColor: theme?.card, borderBottomColor: theme?.divider }
+        ]}
         onPress={() => handleOpenGroup(item)}
       >
         <View style={styles.avatarContainer}>
@@ -460,8 +469,8 @@ const ContactsScreen = ({ navigation, route }) => {
           </View>
         </View>
         <View style={styles.contactInfo}>
-          <Text style={styles.contactName}>{item.name || 'Nhóm'}</Text>
-          <Text style={styles.contactStatus}>
+          <Text style={[styles.contactName, { color: theme?.text }]}>{item.name || 'Nhóm'}</Text>
+          <Text style={[styles.contactStatus, { color: theme?.textSecondary }]}>
             {participantCount} thành viên
           </Text>
         </View>
@@ -469,7 +478,7 @@ const ContactsScreen = ({ navigation, route }) => {
           style={styles.actionButton}
           onPress={() => handleOpenGroup(item)}
         >
-          <Ionicons name="chevron-forward" size={22} color="#999" />
+          <Ionicons name="chevron-forward" size={22} color={theme?.textSecondary} />
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -484,7 +493,10 @@ const ContactsScreen = ({ navigation, route }) => {
     const requestStatus = getFriendRequestStatus(userId);
     
     return (
-      <View style={styles.contactItem}>
+      <View style={[
+        styles.contactItem,
+        { backgroundColor: theme?.card, borderBottomColor: theme?.divider }
+      ]}>
         <TouchableOpacity
           style={styles.contactContent}
           onPress={() => navigation.navigate('PersonalPage', { userId })}
@@ -498,13 +510,13 @@ const ContactsScreen = ({ navigation, route }) => {
             {item.isOnline && <View style={styles.onlineBadge} />}
           </View>
           <View style={styles.contactInfo}>
-            <Text style={styles.contactName}>
+            <Text style={[styles.contactName, { color: theme?.text }]}>
               {nicknames[userId] || item.fullName || 'User'}
             </Text>
             {nicknames[userId] && (
-              <Text style={styles.contactSubtext}>{item.fullName}</Text>
+              <Text style={[styles.contactSubtext, { color: theme?.textSecondary }]}>{item.fullName}</Text>
             )}
-            <Text style={styles.contactStatus}>
+            <Text style={[styles.contactStatus, { color: theme?.textSecondary }]}>
               {item.isOnline ? 'Đang hoạt động' : 'Offline'}
             </Text>
           </View>
@@ -516,13 +528,13 @@ const ContactsScreen = ({ navigation, route }) => {
                 style={styles.actionButton}
                 onPress={() => handleStartConversation(userId)}
               >
-                <Ionicons name="chatbubble" size={22} color="#00B14F" />
+                <Ionicons name="chatbubble" size={22} color={theme?.primary} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={() => navigation.navigate('PersonalPage', { userId })}
               >
-                <Ionicons name="person-circle-outline" size={22} color="#00B14F" />
+                <Ionicons name="person-circle-outline" size={22} color={theme?.primary} />
               </TouchableOpacity>
             </>
           ) : requestStatus === 'sent' ? (
@@ -552,7 +564,7 @@ const ContactsScreen = ({ navigation, route }) => {
               style={[styles.actionButton, styles.addFriendButton]}
               onPress={() => handleSendFriendRequest(userId)}
             >
-              <Ionicons name="person-add" size={22} color="#00B14F" />
+              <Ionicons name="person-add" size={22} color={theme?.primary} />
             </TouchableOpacity>
           )}
         </View>
@@ -566,7 +578,7 @@ const ContactsScreen = ({ navigation, route }) => {
     if (loading) {
       return (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color="#00B14F" />
+          <ActivityIndicator size="large" color={theme?.primary} />
         </View>
       );
     }
@@ -580,8 +592,8 @@ const ContactsScreen = ({ navigation, route }) => {
             renderItem={renderFriendRequest}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Ionicons name="person-add-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Không có lời mời kết bạn</Text>
+                <Ionicons name="person-add-outline" size={64} color={theme?.textMuted || '#ccc'} />
+                <Text style={[styles.emptyText, { color: theme?.textSecondary }]}>Không có lời mời kết bạn</Text>
               </View>
             }
           />
@@ -595,9 +607,9 @@ const ContactsScreen = ({ navigation, route }) => {
             renderItem={renderFriend}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Ionicons name="people-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Chưa có bạn bè</Text>
-                <Text style={styles.emptySubtext}>Tìm kiếm và gửi lời mời kết bạn</Text>
+                <Ionicons name="people-outline" size={64} color={theme?.textMuted || '#ccc'} />
+                <Text style={[styles.emptyText, { color: theme?.textSecondary }]}>Chưa có bạn bè</Text>
+                <Text style={[styles.emptySubtext, { color: theme?.textMuted }]}>Tìm kiếm và gửi lời mời kết bạn</Text>
               </View>
             }
           />
@@ -611,8 +623,8 @@ const ContactsScreen = ({ navigation, route }) => {
             renderItem={renderGroup}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Ionicons name="people-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Chưa có nhóm nào</Text>
+                <Ionicons name="people-outline" size={64} color={theme?.textMuted || '#ccc'} />
+                <Text style={[styles.emptyText, { color: theme?.textSecondary }]}>Chưa có nhóm nào</Text>
               </View>
             }
           />
@@ -626,7 +638,7 @@ const ContactsScreen = ({ navigation, route }) => {
             renderItem={renderAllUser}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>Không tìm thấy người dùng</Text>
+                <Text style={[styles.emptyText, { color: theme?.textSecondary }]}>Không tìm thấy người dùng</Text>
               </View>
             }
           />
@@ -641,7 +653,7 @@ const ContactsScreen = ({ navigation, route }) => {
   if (!user) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00B14F" />
+        <ActivityIndicator size="large" color={theme?.primary} />
       </View>
     );
   }
@@ -666,13 +678,13 @@ const ContactsScreen = ({ navigation, route }) => {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabsContainer}>
+      <View style={[styles.tabsContainer, { backgroundColor: theme?.card, borderBottomColor: theme?.border }]}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'requests' && { borderBottomColor: theme?.primary }]}
             onPress={() => setActiveTab('requests')}
           >
-            <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: theme?.textSecondary }, activeTab === 'requests' && { color: theme?.primary }]}>
               Lời mời
             </Text>
             {friendRequests && Array.isArray(friendRequests.incoming) && friendRequests.incoming.length > 0 && (
@@ -683,34 +695,34 @@ const ContactsScreen = ({ navigation, route }) => {
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'friends' && { borderBottomColor: theme?.primary }]}
             onPress={() => setActiveTab('friends')}
           >
-            <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: theme?.textSecondary }, activeTab === 'friends' && { color: theme?.primary }]}>
               Bạn bè
             </Text>
             {friends && Array.isArray(friends) && friends.length > 0 && (
-              <Text style={styles.countText}>({friends.length})</Text>
+              <Text style={[styles.countText, { color: theme?.textSecondary }]}>({friends.length})</Text>
             )}
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'groups' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'groups' && { borderBottomColor: theme?.primary }]}
             onPress={() => setActiveTab('groups')}
           >
-            <Text style={[styles.tabText, activeTab === 'groups' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: theme?.textSecondary }, activeTab === 'groups' && { color: theme?.primary }]}>
               Nhóm
             </Text>
             {groups && Array.isArray(groups) && groups.length > 0 && (
-              <Text style={styles.countText}>({groups.length})</Text>
+              <Text style={[styles.countText, { color: theme?.textSecondary }]}>({groups.length})</Text>
             )}
           </TouchableOpacity>
           
           <TouchableOpacity
-            style={[styles.tab, activeTab === 'all' && styles.activeTab]}
+            style={[styles.tab, activeTab === 'all' && { borderBottomColor: theme?.primary }]}
             onPress={() => setActiveTab('all')}
           >
-            <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
+            <Text style={[styles.tabText, { color: theme?.textSecondary }, activeTab === 'all' && { color: theme?.primary }]}>
               Tất cả
             </Text>
           </TouchableOpacity>

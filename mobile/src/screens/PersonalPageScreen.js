@@ -66,6 +66,9 @@ const PersonalPageScreen = ({ route, navigation }) => {
   const { user: currentUser, setUser: setUserContext } = useAuth();
   const { theme, isDarkMode } = useTheme();
   const socket = useSocket();
+
+  // Create dynamic styles based on theme (must be defined before any render helpers use it)
+  const dynamicStyles = getStyles(theme, isDarkMode);
   
   // QUAN TRỌNG: Lấy userId từ route.params
   // Có thể là undefined nếu xem trang của mình (không truyền userId)
@@ -673,18 +676,18 @@ const PersonalPageScreen = ({ route, navigation }) => {
   };
 
   const renderComment = (comment) => (
-    <View style={styles.comment}>
-      <View style={styles.commentAvatar}>
-        <Text style={styles.commentAvatarText}>
+    <View style={dynamicStyles.comment}>
+      <View style={dynamicStyles.commentAvatar}>
+        <Text style={dynamicStyles.commentAvatarText}>
           {comment.author?.fullName?.charAt(0).toUpperCase() || 'U'}
         </Text>
       </View>
-      <View style={styles.commentContent}>
-        <View style={styles.commentBubble}>
-          <Text style={styles.commentAuthorName}>{comment.author?.fullName || 'User'}</Text>
-          <Text style={styles.commentText}>{comment.content}</Text>
+      <View style={dynamicStyles.commentContent}>
+        <View style={dynamicStyles.commentBubble}>
+          <Text style={dynamicStyles.commentAuthorName}>{comment.author?.fullName || 'User'}</Text>
+          <Text style={dynamicStyles.commentText}>{comment.content}</Text>
         </View>
-        <Text style={styles.commentTime}>{timeAgo(comment.createdAt)}</Text>
+        <Text style={dynamicStyles.commentTime}>{timeAgo(comment.createdAt)}</Text>
       </View>
     </View>
   );
@@ -696,20 +699,20 @@ const PersonalPageScreen = ({ route, navigation }) => {
     const isOwnPost = item.authorId === currentUser?.id || item.author?._id === currentUser?.id;
     
     return (
-      <View style={styles.post}>
-        <View style={styles.postHeader}>
-          <View style={styles.postAvatar}>
-            <Text style={styles.postAvatarText}>
+      <View style={dynamicStyles.post}>
+        <View style={dynamicStyles.postHeader}>
+          <View style={dynamicStyles.postAvatar}>
+            <Text style={dynamicStyles.postAvatarText}>
               {item.author?.fullName?.charAt(0).toUpperCase() || 'U'}
             </Text>
           </View>
-          <View style={styles.postAuthorInfo}>
-            <Text style={styles.postAuthorName}>{item.author?.fullName || 'User'}</Text>
-            <Text style={styles.postTime}>{timeAgo(item.createdAt)}</Text>
+          <View style={dynamicStyles.postAuthorInfo}>
+            <Text style={dynamicStyles.postAuthorName}>{item.author?.fullName || 'User'}</Text>
+            <Text style={dynamicStyles.postTime}>{timeAgo(item.createdAt)}</Text>
           </View>
           {isOwnPost && (
             <TouchableOpacity
-              style={styles.postDeleteButton}
+              style={dynamicStyles.postDeleteButton}
               onPress={() => {
                 Alert.alert(
                   'Xóa bài viết',
@@ -731,7 +734,7 @@ const PersonalPageScreen = ({ route, navigation }) => {
         </View>
         
         {item.content && (
-          <Text style={styles.postContent}>{item.content}</Text>
+          <Text style={dynamicStyles.postContent}>{item.content}</Text>
         )}
         
         {item.image && (
@@ -741,7 +744,7 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 ? item.image 
                 : `${BASE_URL}${item.image.startsWith('/') ? item.image : '/' + item.image}`
             }} 
-            style={styles.postImage}
+            style={dynamicStyles.postImage}
             resizeMode="cover"
             onError={(error) => {
               console.error('❌ Error loading post image:', error);
@@ -756,54 +759,54 @@ const PersonalPageScreen = ({ route, navigation }) => {
           />
         )}
         
-        <View style={styles.postStats}>
+        <View style={dynamicStyles.postStats}>
           {item.likes?.length > 0 && (
-            <View style={styles.statItem}>
-              <Ionicons name="heart" size={16} color="#ff3040" />
-              <Text style={styles.statText}>{item.likes.length}</Text>
+            <View style={dynamicStyles.statItem}>
+              <Ionicons name="heart" size={16} color={theme?.error || "#ff3040"} />
+              <Text style={dynamicStyles.statText}>{item.likes.length}</Text>
             </View>
           )}
           {item.comments?.length > 0 && (
-            <View style={styles.statItem}>
-              <Text style={styles.statText}>{item.comments.length} bình luận</Text>
+            <View style={dynamicStyles.statItem}>
+              <Text style={dynamicStyles.statText}>{item.comments.length} bình luận</Text>
             </View>
           )}
         </View>
         
-        <View style={styles.postActions}>
+        <View style={dynamicStyles.postActions}>
           <TouchableOpacity 
-            style={[styles.postAction, isLiked && styles.postActionActive]}
+            style={[dynamicStyles.postAction, isLiked && dynamicStyles.postActionActive]}
             onPress={() => handleLike(postId)}
           >
             <Ionicons 
               name={isLiked ? "heart" : "heart-outline"} 
               size={22} 
-              color={isLiked ? "#ff3040" : "#666"} 
+              color={isLiked ? (theme?.error || "#ff3040") : (theme?.textSecondary || "#666")} 
             />
-            <Text style={[styles.postActionText, isLiked && styles.postActionTextActive]}>
+            <Text style={[dynamicStyles.postActionText, isLiked && dynamicStyles.postActionTextActive]}>
               Thích
             </Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.postAction}
+            style={dynamicStyles.postAction}
             onPress={() => toggleComments(postId)}
           >
-            <Ionicons name="chatbubble-outline" size={22} color="#666" />
-            <Text style={styles.postActionText}>Bình luận</Text>
+            <Ionicons name="chatbubble-outline" size={22} color={theme?.textSecondary || "#666"} />
+            <Text style={dynamicStyles.postActionText}>Bình luận</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.postAction}>
-            <Ionicons name="share-outline" size={22} color="#666" />
-            <Text style={styles.postActionText}>Chia sẻ</Text>
+          <TouchableOpacity style={dynamicStyles.postAction}>
+            <Ionicons name="share-outline" size={22} color={theme?.textSecondary || "#666"} />
+            <Text style={dynamicStyles.postActionText}>Chia sẻ</Text>
           </TouchableOpacity>
         </View>
 
         {/* Comments Section */}
         {showCommentSection && (
-          <View style={styles.commentsSection}>
+          <View style={dynamicStyles.commentsSection}>
             {item.comments && item.comments.length > 0 && (
-              <View style={styles.commentsList}>
+              <View style={dynamicStyles.commentsList}>
                 {item.comments.map(comment => (
                   <View key={comment._id}>
                     {renderComment(comment)}
@@ -812,26 +815,26 @@ const PersonalPageScreen = ({ route, navigation }) => {
               </View>
             )}
             
-            <View style={styles.commentInputContainer}>
-              <View style={styles.commentInputAvatar}>
-                <Text style={styles.commentInputAvatarText}>
+            <View style={dynamicStyles.commentInputContainer}>
+              <View style={dynamicStyles.commentInputAvatar}>
+                <Text style={dynamicStyles.commentInputAvatarText}>
                   {currentUser?.fullName?.charAt(0).toUpperCase() || 'U'}
                 </Text>
               </View>
               <TextInput
-                style={styles.commentInput}
+                style={dynamicStyles.commentInput}
                 placeholder="Viết bình luận..."
                 value={commentText[postId] || ''}
                 onChangeText={(text) => setCommentText({ ...commentText, [postId]: text })}
                 multiline
-                placeholderTextColor="#999"
+                placeholderTextColor={theme?.placeholder || "#999"}
               />
               {commentText[postId] && (
                 <TouchableOpacity
-                  style={styles.commentSendButton}
+                  style={dynamicStyles.commentSendButton}
                   onPress={() => handleComment(postId)}
                 >
-                  <Ionicons name="send" size={20} color="#00B14F" />
+                  <Ionicons name="send" size={20} color={theme?.primary || "#00B14F"} />
                 </TouchableOpacity>
               )}
             </View>
@@ -843,32 +846,33 @@ const PersonalPageScreen = ({ route, navigation }) => {
 
   if (loading && !user) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00B14F" />
-        <Text style={styles.loadingText}>Đang tải...</Text>
+      <View style={[dynamicStyles.center, { backgroundColor: theme?.background }]}>
+        <ActivityIndicator size="large" color={theme?.primary || "#00B14F"} />
+        <Text style={[dynamicStyles.loadingText, { color: theme?.textSecondary }]}>Đang tải...</Text>
       </View>
     );
   }
 
   if (!user) {
     return (
-      <View style={styles.center}>
-        <Ionicons name="person-outline" size={64} color="#ccc" />
-        <Text style={styles.emptyText}>Không tìm thấy người dùng</Text>
+      <View style={[dynamicStyles.center, { backgroundColor: theme?.background }]}>
+        <Ionicons name="person-outline" size={64} color={theme?.textMuted || "#ccc"} />
+        <Text style={[dynamicStyles.emptyText, { color: theme?.textSecondary }]}>Không tìm thấy người dùng</Text>
         <TouchableOpacity
-          style={styles.retryButton}
+          style={[dynamicStyles.retryButton, { backgroundColor: theme?.primary }]}
           onPress={loadUserProfile}
         >
-          <Text style={styles.retryButtonText}>Thử lại</Text>
+          <Text style={dynamicStyles.retryButtonText}>Thử lại</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme?.background || (isDarkMode ? '#121212' : '#FFFFFF') }]}>
+    <View style={[dynamicStyles.container, { backgroundColor: theme?.background }]}>
       <ScrollView 
-        style={styles.scrollView}
+        style={dynamicStyles.scrollView}
+        contentContainerStyle={dynamicStyles.scrollContent}
         refreshControl={
           <RefreshControl 
             refreshing={refreshing} 
@@ -880,22 +884,23 @@ const PersonalPageScreen = ({ route, navigation }) => {
           />
         }
       >
+        <View style={dynamicStyles.pageContainer}>
         {/* Cover Photo & Profile Header */}
-        <View style={styles.profileHeader}>
-          <View style={styles.coverPhotoContainer}>
+        <View style={[dynamicStyles.card, dynamicStyles.profileHeader]}>
+          <View style={dynamicStyles.coverPhotoContainer}>
             {user?.coverPhoto ? (
               <Image 
                 source={{ uri: `${BASE_URL}${user.coverPhoto}` }} 
-                style={styles.coverPhoto} 
+                style={dynamicStyles.coverPhoto} 
               />
             ) : (
-              <View style={styles.coverPhotoPlaceholder}>
-                <Ionicons name="image-outline" size={48} color="#ccc" />
+              <View style={dynamicStyles.coverPhotoPlaceholder}>
+                <Ionicons name="image-outline" size={48} color={theme.textMuted} />
               </View>
             )}
             {isOwnProfile && (
               <TouchableOpacity
-                style={styles.editCoverButton}
+                style={dynamicStyles.editCoverButton}
                 onPress={() => pickImage('cover')}
                 disabled={uploadingCover}
               >
@@ -904,30 +909,30 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 ) : (
                   <>
                     <Ionicons name="camera" size={20} color="#fff" />
-                    <Text style={styles.editCoverText}>Thêm ảnh bìa</Text>
+                    <Text style={dynamicStyles.editCoverText}>Thêm ảnh bìa</Text>
                   </>
                 )}
               </TouchableOpacity>
             )}
           </View>
           
-          <View style={styles.profileInfo}>
-            <View style={styles.avatarContainer}>
+          <View style={dynamicStyles.profileInfo}>
+            <View style={dynamicStyles.avatarContainer}>
               {user?.avatar ? (
                 <Image 
                   source={{ uri: `${BASE_URL}${user.avatar}` }} 
-                  style={styles.avatarImage}
+                  style={dynamicStyles.avatarImage}
                 />
               ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
+                <View style={[dynamicStyles.avatar, { backgroundColor: theme.primary }]}>
+                  <Text style={dynamicStyles.avatarText}>
                     {user?.fullName?.charAt(0).toUpperCase() || 'U'}
                   </Text>
                 </View>
               )}
               {isOwnProfile && (
                 <TouchableOpacity
-                  style={styles.editAvatarButton}
+                  style={[dynamicStyles.editAvatarButton, { backgroundColor: theme.primary }]}
                   onPress={() => pickImage('avatar')}
                   disabled={uploadingAvatar}
                 >
@@ -939,18 +944,18 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.name}>{user?.fullName || 'User'}</Text>
-            <Text style={styles.username}>@{user?.username || 'username'}</Text>
+            <Text style={[dynamicStyles.name, { color: theme.text }]}>{user?.fullName || 'User'}</Text>
+            <Text style={[dynamicStyles.username, { color: theme.textSecondary }]}>@{user?.username || 'username'}</Text>
           </View>
         </View>
         
         {/* Action Buttons Container - Only show when viewing other user's profile */}
         {!isOwnProfile && user && (
-          <View style={styles.actionButtonsContainer}>
+          <View style={[dynamicStyles.card, dynamicStyles.actionButtonsContainer]}>
             {/* Mutual Friends */}
             {mutualFriendsCount > 0 && (
               <TouchableOpacity
-                style={styles.mutualFriendsButton}
+                style={dynamicStyles.mutualFriendsButton}
                 onPress={() => {
                   Alert.alert(
                     'Bạn chung',
@@ -967,18 +972,18 @@ const PersonalPageScreen = ({ route, navigation }) => {
                   );
                 }}
               >
-                <Ionicons name="people" size={16} color="#00B14F" />
-                <Text style={styles.mutualFriendsText}>
+                <Ionicons name="people" size={16} color={theme?.primary || "#00B14F"} />
+                <Text style={dynamicStyles.mutualFriendsText}>
                   {mutualFriendsCount} bạn chung
                 </Text>
               </TouchableOpacity>
             )}
             
             {/* Main Action Buttons Row */}
-            <View style={styles.actionButtonsRow}>
+            <View style={dynamicStyles.actionButtonsRow}>
               {/* Nhắn tin button - Large primary button */}
               <WebButton
-                style={styles.messageButton}
+                style={dynamicStyles.messageButton}
                 onPress={async () => {
                   console.log('📱 Nhắn tin button pressed');
                   try {
@@ -1012,20 +1017,20 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 }}
               >
                 <Ionicons name="chatbubble-ellipses" size={20} color="#fff" />
-                <Text style={styles.messageButtonText}>Nhắn tin</Text>
+                <Text style={dynamicStyles.messageButtonText}>Nhắn tin</Text>
               </WebButton>
               
               {/* Friend Status Button */}
               {friendRequestStatus === 'sent' && (
-                <View style={styles.friendStatusButton}>
-                  <Ionicons name="time-outline" size={18} color="#999" />
-                  <Text style={styles.friendStatusButtonText}>Đã gửi</Text>
+                <View style={dynamicStyles.friendStatusButton}>
+                  <Ionicons name="time-outline" size={18} color={theme?.textSecondary || "#999"} />
+                  <Text style={[dynamicStyles.friendStatusButtonText, { color: theme?.textSecondary }]}>Đã gửi</Text>
                 </View>
               )}
               
               {friendRequestStatus === 'incoming' && (
                 <TouchableOpacity
-                  style={styles.acceptFriendButton}
+                  style={[dynamicStyles.acceptFriendButton, { backgroundColor: theme?.primary }]}
                   onPress={() => {
                     console.log('📱 Chấp nhận lời mời button pressed');
                     handleAcceptFriendRequest();
@@ -1033,35 +1038,35 @@ const PersonalPageScreen = ({ route, navigation }) => {
                   activeOpacity={0.7}
                 >
                   <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                  <Text style={styles.acceptFriendText}>Chấp nhận</Text>
+                  <Text style={dynamicStyles.acceptFriendText}>Chấp nhận</Text>
                 </TouchableOpacity>
               )}
               
               {!isFriend && !friendRequestStatus && (
                 <WebButton
-                  style={styles.addFriendButton}
+                  style={dynamicStyles.addFriendButton}
                   onPress={() => {
                     console.log('📱 Kết bạn button pressed');
                     handleSendFriendRequest();
                   }}
                 >
-                  <Ionicons name="person-add" size={18} color="#00B14F" />
-                  <Text style={styles.addFriendText}>Kết bạn</Text>
+                  <Ionicons name="person-add" size={18} color={theme?.primary || "#00B14F"} />
+                  <Text style={dynamicStyles.addFriendText}>Kết bạn</Text>
                 </WebButton>
               )}
               
               {isFriend && (
-                <View style={styles.friendStatusButton}>
-                  <Ionicons name="checkmark-circle" size={18} color="#00B14F" />
-                  <Text style={[styles.friendStatusButtonText, { color: '#00B14F' }]}>Bạn bè</Text>
+                <View style={dynamicStyles.friendStatusButton}>
+                  <Ionicons name="checkmark-circle" size={18} color={theme?.primary || "#00B14F"} />
+                  <Text style={[dynamicStyles.friendStatusButtonText, { color: theme?.primary || '#00B14F' }]}>Bạn bè</Text>
                 </View>
               )}
             </View>
             
             {/* Call Buttons Row */}
-            <View style={styles.callButtonsRow}>
+            <View style={dynamicStyles.callButtonsRow}>
               <TouchableOpacity
-                style={styles.callButton}
+                style={dynamicStyles.callButton}
                 onPress={() => {
                   console.log('📱 Gọi button pressed');
                   const otherUserId = getUserId(user);
@@ -1095,12 +1100,12 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="call" size={22} color="#00B14F" />
-                <Text style={styles.callButtonText}>Gọi</Text>
+                <Ionicons name="call" size={22} color={theme?.primary || "#00B14F"} />
+                <Text style={dynamicStyles.callButtonText}>Gọi</Text>
               </TouchableOpacity>
               
               <TouchableOpacity
-                style={styles.videoCallButton}
+                style={dynamicStyles.videoCallButton}
                 onPress={() => {
                   console.log('📱 Video call button pressed');
                   const otherUserId = getUserId(user);
@@ -1134,8 +1139,8 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons name="videocam" size={22} color="#00B14F" />
-                <Text style={styles.callButtonText}>Video</Text>
+                <Ionicons name="videocam" size={22} color={theme?.primary || "#00B14F"} />
+                <Text style={dynamicStyles.callButtonText}>Video</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1143,28 +1148,28 @@ const PersonalPageScreen = ({ route, navigation }) => {
         
         {/* Tabs - Posts, About, Photos */}
         {!isOwnProfile && (
-          <View style={styles.tabsContainer}>
+          <View style={dynamicStyles.tabsContainer}>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'posts' && styles.activeTab]}
+              style={[dynamicStyles.tab, activeTab === 'posts' && dynamicStyles.activeTab]}
               onPress={() => setActiveTab('posts')}
             >
-              <Text style={[styles.tabText, activeTab === 'posts' && styles.activeTabText]}>
+              <Text style={[dynamicStyles.tabText, activeTab === 'posts' && dynamicStyles.activeTabText]}>
                 Bài viết
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'about' && styles.activeTab]}
+              style={[dynamicStyles.tab, activeTab === 'about' && dynamicStyles.activeTab]}
               onPress={() => setActiveTab('about')}
             >
-              <Text style={[styles.tabText, activeTab === 'about' && styles.activeTabText]}>
+              <Text style={[dynamicStyles.tabText, activeTab === 'about' && dynamicStyles.activeTabText]}>
                 Giới thiệu
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'photos' && styles.activeTab]}
+              style={[dynamicStyles.tab, activeTab === 'photos' && dynamicStyles.activeTab]}
               onPress={() => setActiveTab('photos')}
             >
-              <Text style={[styles.tabText, activeTab === 'photos' && styles.activeTabText]}>
+              <Text style={[dynamicStyles.tabText, activeTab === 'photos' && dynamicStyles.activeTabText]}>
                 Ảnh
               </Text>
             </TouchableOpacity>
@@ -1173,56 +1178,56 @@ const PersonalPageScreen = ({ route, navigation }) => {
 
         {/* Post Input (only for own profile) */}
         {isOwnProfile && (
-          <View style={styles.postInputContainer}>
+          <View style={[dynamicStyles.card, dynamicStyles.postInputContainer]}>
             {showPostInput ? (
-              <View style={styles.postInputBox}>
+              <View style={dynamicStyles.postInputBox}>
                 <TextInput
-                  style={styles.postInput}
+                  style={dynamicStyles.postInput}
                   placeholder="Bạn đang nghĩ gì?"
                   value={postText}
                   onChangeText={setPostText}
                   multiline
                   numberOfLines={4}
-                  placeholderTextColor="#999"
+                  placeholderTextColor={theme?.placeholder || "#999"}
                 />
                 {postImage && (
-                  <View style={styles.postImagePreview}>
-                    <Image source={{ uri: postImage }} style={styles.previewImage} />
+                  <View style={dynamicStyles.postImagePreview}>
+                    <Image source={{ uri: postImage }} style={dynamicStyles.previewImage} />
                     <TouchableOpacity
-                      style={styles.removeImageBtn}
+                      style={dynamicStyles.removeImageBtn}
                       onPress={() => setPostImage(null)}
                     >
                       <Ionicons name="close-circle" size={24} color="#fff" />
                     </TouchableOpacity>
                   </View>
                 )}
-                <View style={styles.postInputActions}>
+                <View style={dynamicStyles.postInputActions}>
                   <TouchableOpacity
-                    style={styles.postInputAction}
+                    style={dynamicStyles.postInputAction}
                     onPress={() => pickImage('post')}
                   >
-                    <Ionicons name="image-outline" size={24} color="#00B14F" />
+                    <Ionicons name="image-outline" size={24} color={theme?.primary || "#00B14F"} />
                   </TouchableOpacity>
-                  <View style={styles.postInputButtons}>
+                  <View style={dynamicStyles.postInputButtons}>
                     <TouchableOpacity
-                      style={styles.cancelButton}
+                      style={dynamicStyles.cancelButton}
                       onPress={() => {
                         setShowPostInput(false);
                         setPostText('');
                         setPostImage(null);
                       }}
                     >
-                      <Text style={styles.cancelButtonText}>Hủy</Text>
+                      <Text style={dynamicStyles.cancelButtonText}>Hủy</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.postButton, posting && styles.postButtonDisabled]}
+                      style={[dynamicStyles.postButton, { backgroundColor: theme?.primary }, posting && dynamicStyles.postButtonDisabled]}
                       onPress={handlePost}
                       disabled={posting}
                     >
                       {posting ? (
                         <ActivityIndicator color="#fff" size="small" />
                       ) : (
-                        <Text style={styles.postButtonText}>Đăng</Text>
+                        <Text style={dynamicStyles.postButtonText}>Đăng</Text>
                       )}
                     </TouchableOpacity>
                   </View>
@@ -1230,15 +1235,15 @@ const PersonalPageScreen = ({ route, navigation }) => {
               </View>
             ) : (
               <TouchableOpacity
-                style={styles.createPostButton}
+                style={dynamicStyles.createPostButton}
                 onPress={() => setShowPostInput(true)}
               >
-                <View style={styles.createPostAvatar}>
-                  <Text style={styles.createPostAvatarText}>
+                <View style={[dynamicStyles.createPostAvatar, { backgroundColor: theme?.primary }]}>
+                  <Text style={dynamicStyles.createPostAvatarText}>
                     {currentUser?.fullName?.charAt(0).toUpperCase() || 'U'}
                   </Text>
                 </View>
-                <Text style={styles.createPostText}>Bạn đang nghĩ gì?</Text>
+                <Text style={dynamicStyles.createPostText}>Bạn đang nghĩ gì?</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1246,43 +1251,43 @@ const PersonalPageScreen = ({ route, navigation }) => {
 
         {/* Content based on active tab */}
         {!isOwnProfile && activeTab === 'about' ? (
-          <View style={styles.aboutContainer}>
-            <View style={styles.aboutSection}>
-              <Text style={styles.aboutTitle}>Thông tin</Text>
-              <View style={styles.aboutItem}>
-                <Ionicons name="person-outline" size={20} color="#666" />
-                <Text style={styles.aboutLabel}>Tên:</Text>
-                <Text style={styles.aboutValue}>{user?.fullName || 'Chưa cập nhật'}</Text>
+          <View style={[dynamicStyles.card, dynamicStyles.aboutContainer]}>
+            <View style={dynamicStyles.aboutSection}>
+              <Text style={dynamicStyles.aboutTitle}>Thông tin</Text>
+              <View style={dynamicStyles.aboutItem}>
+                <Ionicons name="person-outline" size={20} color={theme?.textSecondary || "#666"} />
+                <Text style={dynamicStyles.aboutLabel}>Tên:</Text>
+                <Text style={dynamicStyles.aboutValue}>{user?.fullName || 'Chưa cập nhật'}</Text>
               </View>
-              <View style={styles.aboutItem}>
-                <Ionicons name="at-outline" size={20} color="#666" />
-                <Text style={styles.aboutLabel}>Username:</Text>
-                <Text style={styles.aboutValue}>@{user?.username || 'N/A'}</Text>
+              <View style={dynamicStyles.aboutItem}>
+                <Ionicons name="at-outline" size={20} color={theme?.textSecondary || "#666"} />
+                <Text style={dynamicStyles.aboutLabel}>Username:</Text>
+                <Text style={dynamicStyles.aboutValue}>@{user?.username || 'N/A'}</Text>
               </View>
               {mutualFriendsCount > 0 && (
-                <View style={styles.aboutItem}>
-                  <Ionicons name="people-outline" size={20} color="#666" />
-                  <Text style={styles.aboutLabel}>Bạn chung:</Text>
-                  <Text style={styles.aboutValue}>{mutualFriendsCount} người</Text>
+                <View style={dynamicStyles.aboutItem}>
+                  <Ionicons name="people-outline" size={20} color={theme?.textSecondary || "#666"} />
+                  <Text style={dynamicStyles.aboutLabel}>Bạn chung:</Text>
+                  <Text style={dynamicStyles.aboutValue}>{mutualFriendsCount} người</Text>
                 </View>
               )}
             </View>
           </View>
         ) : !isOwnProfile && activeTab === 'photos' ? (
-          <View style={styles.photosContainer}>
+          <View style={[dynamicStyles.card, dynamicStyles.photosContainer]}>
             {posts.filter(p => p.image).length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <Ionicons name="images-outline" size={64} color="#ccc" />
-                <Text style={styles.emptyText}>Chưa có ảnh nào</Text>
+              <View style={dynamicStyles.emptyContainer}>
+                <Ionicons name="images-outline" size={64} color={theme?.textMuted || "#ccc"} />
+                <Text style={dynamicStyles.emptyText}>Chưa có ảnh nào</Text>
               </View>
             ) : (
-              <View style={styles.photosGrid}>
+              <View style={dynamicStyles.photosGrid}>
                 {posts
                   .filter(p => p.image)
                   .map((post, index) => (
                     <TouchableOpacity
                       key={post.id || post._id || index}
-                      style={styles.photoItem}
+                      style={dynamicStyles.photoItem}
                       onPress={() => {
                         Alert.alert('Ảnh', 'Xem ảnh chi tiết');
                       }}
@@ -1293,7 +1298,7 @@ const PersonalPageScreen = ({ route, navigation }) => {
                             ? post.image
                             : `${BASE_URL}${post.image.startsWith('/') ? post.image : '/' + post.image}`
                         }}
-                        style={styles.photoThumbnail}
+                        style={dynamicStyles.photoThumbnail}
                         resizeMode="cover"
                       />
                     </TouchableOpacity>
@@ -1304,13 +1309,13 @@ const PersonalPageScreen = ({ route, navigation }) => {
         ) : (
           /* Posts List */
           loading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#00B14F" />
+            <View style={[dynamicStyles.card, dynamicStyles.loadingContainer]}>
+              <ActivityIndicator size="large" color={theme?.primary || "#00B14F"} />
             </View>
           ) : posts.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="document-text-outline" size={64} color="#ccc" />
-              <Text style={styles.emptyText}>
+            <View style={[dynamicStyles.card, dynamicStyles.emptyContainer]}>
+              <Ionicons name="document-text-outline" size={64} color={theme?.textMuted || "#ccc"} />
+              <Text style={dynamicStyles.emptyText}>
                 {isOwnProfile ? 'Chưa có bài viết nào' : 'Người dùng này chưa có bài viết'}
               </Text>
             </View>
@@ -1323,27 +1328,48 @@ const PersonalPageScreen = ({ route, navigation }) => {
             />
           )
         )}
+        </View>
       </ScrollView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme, isDarkMode) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: theme?.background || '#F2F2F7',
   },
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingVertical: 12,
+    paddingBottom: 28,
+  },
+  pageContainer: {
+    width: '100%',
+    paddingHorizontal: 12,
+    alignSelf: 'center',
+    ...(Platform.OS === 'web' ? { maxWidth: 900 } : null),
+  },
+  card: {
+    backgroundColor: theme?.card || theme?.surface || '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginBottom: 12,
+    shadowColor: theme?.shadowColor || '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDarkMode ? 0.3 : 0.06,
+    shadowRadius: 10,
+    elevation: 2,
+  },
   profileHeader: {
-    backgroundColor: '#fff',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   coverPhotoContainer: {
     height: 200,
     position: 'relative',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme?.border || '#e0e0e0',
   },
   coverPhoto: {
     width: '100%',
@@ -1354,7 +1380,7 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: theme?.border || '#e0e0e0',
   },
   editCoverButton: {
     position: 'absolute',
@@ -1386,18 +1412,18 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: theme?.card || theme?.surface || '#fff',
   },
   avatarImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
     borderWidth: 4,
-    borderColor: '#fff',
+    borderColor: theme?.card || theme?.surface || '#fff',
   },
   avatarText: {
     color: '#fff',
@@ -1411,31 +1437,35 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: '#fff',
+    borderColor: theme?.card || theme?.surface || '#fff',
   },
   name: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme?.text || '#000',
     marginBottom: 4,
   },
   username: {
     fontSize: 16,
-    color: '#666',
+    color: theme?.textSecondary || '#666',
     marginBottom: 16,
   },
   actionButtonsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: theme?.card || theme?.surface || '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderRadius: 16,
+    marginBottom: 12,
     zIndex: 10,
     elevation: 5,
+    shadowColor: theme?.shadowColor || '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDarkMode ? 0.3 : 0.06,
+    shadowRadius: 10,
   },
   actionButtonsRow: {
     flexDirection: 'row',
@@ -1451,12 +1481,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 24,
     gap: 8,
-    shadowColor: '#000',
+    shadowColor: theme?.shadowColor || '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -1488,12 +1518,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E6F9EE',
+    backgroundColor: theme?.primaryLight || '#E6F9EE',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#00B14F',
+    borderColor: theme?.primary || '#00B14F',
     gap: 6,
     cursor: 'pointer',
     ...(Platform.OS === 'web' && {
@@ -1502,7 +1532,7 @@ const styles = StyleSheet.create({
     }),
   },
   callButtonText: {
-    color: '#00B14F',
+    color: theme?.primary || '#00B14F',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -1511,12 +1541,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#E6F9EE',
+    backgroundColor: theme?.primaryLight || '#E6F9EE',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#00B14F',
+    borderColor: theme?.primary || '#00B14F',
     gap: 6,
     cursor: 'pointer',
     ...(Platform.OS === 'web' && {
@@ -1525,24 +1555,23 @@ const styles = StyleSheet.create({
     }),
   },
   postInputContainer: {
-    backgroundColor: '#fff',
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   createPostButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme?.border || '#e0e0e0',
     borderRadius: 24,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme?.inputBackground || '#f5f5f5',
   },
   createPostAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1555,22 +1584,23 @@ const styles = StyleSheet.create({
   createPostText: {
     flex: 1,
     fontSize: 16,
-    color: '#999',
+    color: theme?.placeholder || '#999',
   },
   postInputBox: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: theme?.inputBackground || '#f9f9f9',
     borderRadius: 12,
     padding: 12,
   },
   postInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: theme?.border || '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
     minHeight: 100,
     textAlignVertical: 'top',
-    backgroundColor: '#fff',
+    backgroundColor: theme?.card || theme?.surface || '#fff',
+    color: theme?.text || '#000',
   },
   postImagePreview: {
     marginTop: 12,
@@ -1606,17 +1636,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: theme?.border || '#ccc',
   },
   cancelButtonText: {
-    color: '#666',
+    color: theme?.textSecondary || '#666',
     fontSize: 14,
   },
   postButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#00B14F',
   },
   postButtonDisabled: {
     opacity: 0.6,
@@ -1633,13 +1662,11 @@ const styles = StyleSheet.create({
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
-    backgroundColor: '#fff',
-    marginTop: 8,
   },
   emptyText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#999',
+    color: theme?.textSecondary || '#999',
   },
   mutualFriendsButton: {
     flexDirection: 'row',
@@ -1648,7 +1675,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#E6F9EE',
+    backgroundColor: theme?.primaryLight || '#E6F9EE',
     marginBottom: 10,
     gap: 6,
     cursor: 'pointer',
@@ -1659,7 +1686,7 @@ const styles = StyleSheet.create({
   },
   mutualFriendsText: {
     fontSize: 14,
-    color: '#00B14F',
+    color: theme?.primary || '#00B14F',
     fontWeight: '500',
   },
   addFriendButton: {
@@ -1669,9 +1696,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 24,
-    backgroundColor: '#E6F9EE',
+    backgroundColor: theme?.primaryLight || '#E6F9EE',
     borderWidth: 1,
-    borderColor: '#00B14F',
+    borderColor: theme?.primary || '#00B14F',
     gap: 6,
     minWidth: 100,
     cursor: 'pointer',
@@ -1684,7 +1711,7 @@ const styles = StyleSheet.create({
   },
   addFriendText: {
     fontSize: 15,
-    color: '#00B14F',
+    color: theme?.primary || '#00B14F',
     fontWeight: '600',
   },
   acceptFriendButton: {
@@ -1694,7 +1721,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 24,
-    backgroundColor: '#00B14F',
     gap: 6,
     minWidth: 100,
     cursor: 'pointer',
@@ -1715,21 +1741,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 24,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme?.inputBackground || '#f5f5f5',
     gap: 6,
     minWidth: 100,
   },
   friendStatusButtonText: {
     fontSize: 15,
-    color: '#666',
+    color: theme?.textSecondary || '#666',
     fontWeight: '500',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: theme?.card || theme?.surface || '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: theme?.border || '#e0e0e0',
     paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 12,
   },
   tab: {
     flex: 1,
@@ -1739,19 +1767,18 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#00B14F',
+    borderBottomColor: theme?.primary || '#00B14F',
   },
   tabText: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#666',
+    color: theme?.textSecondary || '#666',
   },
   activeTabText: {
-    color: '#00B14F',
+    color: theme?.primary || '#00B14F',
     fontWeight: '600',
   },
   aboutContainer: {
-    backgroundColor: '#fff',
     padding: 16,
   },
   aboutSection: {
@@ -1783,7 +1810,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   photosContainer: {
-    backgroundColor: '#fff',
     padding: 8,
   },
   photosGrid: {
@@ -1802,9 +1828,16 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   post: {
-    backgroundColor: '#fff',
-    marginBottom: 8,
+    backgroundColor: theme?.card || theme?.surface || '#fff',
+    marginBottom: 12,
     padding: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: theme?.shadowColor || '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: isDarkMode ? 0.3 : 0.06,
+    shadowRadius: 10,
+    elevation: 2,
   },
   postHeader: {
     flexDirection: 'row',
@@ -1821,7 +1854,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -1837,16 +1870,16 @@ const styles = StyleSheet.create({
   postAuthorName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme?.text || '#000',
   },
   postTime: {
     fontSize: 12,
-    color: '#999',
+    color: theme?.textSecondary || '#999',
     marginTop: 2,
   },
   postContent: {
     fontSize: 16,
-    color: '#333',
+    color: theme?.text || '#000',
     lineHeight: 22,
     marginBottom: 12,
   },
@@ -1866,7 +1899,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: theme?.divider || '#f0f0f0',
     marginBottom: 8,
   },
   statItem: {
@@ -1876,7 +1909,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     fontSize: 14,
-    color: '#666',
+    color: theme?.textSecondary || '#666',
     marginLeft: 4,
   },
   postActions: {
@@ -1893,21 +1926,21 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   postActionActive: {
-    backgroundColor: '#fff5f5',
+    backgroundColor: theme?.primaryLight || '#fff5f5',
   },
   postActionText: {
     marginLeft: 6,
     fontSize: 14,
-    color: '#666',
+    color: theme?.textSecondary || '#666',
   },
   postActionTextActive: {
-    color: '#ff3040',
+    color: theme?.error || '#ff3040',
   },
   commentsSection: {
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
+    borderTopColor: theme?.divider || '#f0f0f0',
   },
   commentsList: {
     marginBottom: 12,
@@ -1920,7 +1953,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -1934,7 +1967,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   commentBubble: {
-    backgroundColor: '#f0f2f5',
+    backgroundColor: theme?.messageOther || '#f0f2f5',
     borderRadius: 12,
     padding: 10,
     marginBottom: 4,
@@ -1942,23 +1975,23 @@ const styles = StyleSheet.create({
   commentAuthorName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: theme?.text || '#000',
     marginBottom: 4,
   },
   commentText: {
     fontSize: 14,
-    color: '#333',
+    color: theme?.text || '#000',
     lineHeight: 20,
   },
   commentTime: {
     fontSize: 12,
-    color: '#999',
+    color: theme?.textSecondary || '#999',
     marginLeft: 10,
   },
   commentInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f2f5',
+    backgroundColor: theme?.inputBackground || '#f0f2f5',
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -1967,7 +2000,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -1980,7 +2013,7 @@ const styles = StyleSheet.create({
   commentInput: {
     flex: 1,
     fontSize: 14,
-    color: '#333',
+    color: theme?.text || '#000',
     maxHeight: 100,
   },
   commentSendButton: {
@@ -1990,18 +2023,17 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: '#666',
+    color: theme?.textSecondary || '#666',
   },
   retryButton: {
     marginTop: 16,
     paddingHorizontal: 24,
     paddingVertical: 12,
-    backgroundColor: '#00B14F',
+    backgroundColor: theme?.primary || '#00B14F',
     borderRadius: 8,
   },
   retryButtonText: {

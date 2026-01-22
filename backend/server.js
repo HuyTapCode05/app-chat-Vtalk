@@ -68,6 +68,7 @@ app.use('/api/pinned-messages', require('./routes/pinnedMessages'));
 app.use('/api/close-friends', require('./routes/closeFriends'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/stories', require('./routes/stories'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Socket.io connection handling
 const { handleSocketConnection } = require('./socket/socketHandler');

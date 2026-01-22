@@ -10,11 +10,13 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import storage from '../utils/storage';
 
 const EditProfileScreen = ({ navigation }) => {
   const { user, setUser } = useAuth();
+  const { theme } = useTheme();
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [username, setUsername] = useState(user?.username || '');
   const [loading, setLoading] = useState(false);
@@ -60,40 +62,46 @@ const EditProfileScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.section}>
-        <Text style={styles.label}>Tên đầy đủ</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Tên đầy đủ</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
           value={fullName}
           onChangeText={setFullName}
           placeholder="Nhập tên đầy đủ"
+          placeholderTextColor={theme.placeholder}
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Username</Text>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Username</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: theme.card, borderColor: theme.border, color: theme.text }]}
           value={username}
           onChangeText={setUsername}
           placeholder="Nhập username"
           autoCapitalize="none"
+          placeholderTextColor={theme.placeholder}
         />
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.label}>Email</Text>
+      <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
         <TextInput
-          style={[styles.input, styles.disabledInput]}
+          style={[
+            styles.input,
+            styles.disabledInput,
+            { backgroundColor: theme.inputBackground, borderColor: theme.border, color: theme.textMuted },
+          ]}
           value={user?.email || ''}
           editable={false}
         />
-        <Text style={styles.hint}>Email không thể thay đổi</Text>
+        <Text style={[styles.hint, { color: theme.textSecondary }]}>Email không thể thay đổi</Text>
       </View>
 
       <TouchableOpacity
-        style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+        style={[styles.saveButton, { backgroundColor: theme.primary }, loading && styles.saveButtonDisabled]}
         onPress={handleSave}
         disabled={loading}
       >
@@ -110,37 +118,28 @@ const EditProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   section: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   label: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#fff',
   },
   disabledInput: {
-    backgroundColor: '#f5f5f5',
-    color: '#999',
   },
   hint: {
     fontSize: 12,
-    color: '#999',
     marginTop: 4,
   },
   saveButton: {
-    backgroundColor: '#00B14F',
     margin: 16,
     padding: 16,
     borderRadius: 8,

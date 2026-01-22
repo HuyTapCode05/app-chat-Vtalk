@@ -8,7 +8,10 @@ import { logger } from '../utils/logger';
 import { API_CONFIG } from '../utils/env';
 
 // Get API URL from environment variables (app.config.js)
-const API_URL = Constants.expoConfig.extra.API_URL;
+// On some platforms (especially web), Constants.expoConfig can be undefined,
+// so we need to guard it and provide a sensible default.
+const expoConfig = Constants.expoConfig || Constants.manifest || {};
+const API_URL = expoConfig.extra?.API_URL || 'http://localhost:5000/api';
 const BASE_URL = API_URL.replace('/api', '');
 
 /**

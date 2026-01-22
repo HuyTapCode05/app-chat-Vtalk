@@ -22,7 +22,6 @@ import { useTheme } from '../context/ThemeContext';
 import api, { BASE_URL } from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
 import { getConversationId, getFirstChar } from '../utils/helpers';
-import { COLORS } from '../utils/constants';
 
 const GroupsScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -56,7 +55,7 @@ const GroupsScreen = ({ navigation }) => {
         </TouchableOpacity>
       ),
     });
-  }, [navigation]);
+  }, [navigation, theme.headerText]);
 
   const setupSocketListeners = () => {
     if (!socket) return;
@@ -146,7 +145,7 @@ const GroupsScreen = ({ navigation }) => {
   const renderGroup = ({ item }) => {
     return (
       <TouchableOpacity
-        style={[styles.groupItem, { backgroundColor: theme.cardBackground }]}
+        style={[styles.groupItem, { backgroundColor: theme.card }]}
         onPress={() => handleSelectGroup(item)}
         onLongPress={() => {
           const groupId = getConversationId(item);
@@ -223,9 +222,9 @@ const GroupsScreen = ({ navigation }) => {
         </View>
         <View style={styles.groupInfo}>
           <View style={styles.groupHeader}>
-            <Text style={[styles.groupName, { color: theme.textPrimary }]}>{item.name || 'Nhóm chat'}</Text>
+            <Text style={[styles.groupName, { color: theme.text }]}>{item.name || 'Nhóm chat'}</Text>
             {item.lastMessageAt && (
-              <Text style={[styles.time, { color: theme.textTertiary }]}>
+              <Text style={[styles.time, { color: theme.textSecondary }]}>
                 {new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
                   hour: '2-digit',
                   minute: '2-digit',
@@ -238,7 +237,7 @@ const GroupsScreen = ({ navigation }) => {
               {getLastMessage(item)}
             </Text>
           </View>
-          <Text style={[styles.memberCount, { color: theme.textTertiary }]}>
+          <Text style={[styles.memberCount, { color: theme.textSecondary }]}>
             {item.participants?.length || 0} thành viên
           </Text>
         </View>
@@ -257,10 +256,10 @@ const GroupsScreen = ({ navigation }) => {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       {/* Search Bar */}
-      <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground, borderColor: theme.border }]}>
+      <View style={[styles.searchContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
         <Ionicons name="search" size={20} color={theme.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={[styles.searchInput, { color: theme.textPrimary }]}
+          style={[styles.searchInput, { color: theme.text }]}
           placeholder="Tìm kiếm nhóm..."
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -285,16 +284,16 @@ const GroupsScreen = ({ navigation }) => {
           <View style={styles.empty}>
             {searchQuery ? (
               <>
-                <Text style={[styles.emptyText, { color: theme.textTertiary }]}>Không tìm thấy kết quả</Text>
-                <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Không tìm thấy kết quả</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textSecondary }]}>
                   Thử tìm kiếm với từ khóa khác
                 </Text>
               </>
             ) : (
               <>
-                <Ionicons name="people-outline" size={64} color={theme.textTertiary} />
-                <Text style={[styles.emptyText, { color: theme.textTertiary }]}>Chưa có nhóm nào</Text>
-                <Text style={[styles.emptySubtext, { color: theme.textTertiary }]}>
+                <Ionicons name="people-outline" size={64} color={theme.textMuted} />
+                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>Chưa có nhóm nào</Text>
+                <Text style={[styles.emptySubtext, { color: theme.textSecondary }]}>
                   Bấm vào nút + để tạo nhóm mới
                 </Text>
               </>
@@ -302,7 +301,7 @@ const GroupsScreen = ({ navigation }) => {
           </View>
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       />
     </View>
@@ -345,7 +344,7 @@ const createStyles = (theme) => StyleSheet.create({
     marginVertical: 6,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: theme.shadowColor || '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
@@ -355,7 +354,7 @@ const createStyles = (theme) => StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#6a1b9a',
+    backgroundColor: theme.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

@@ -7,7 +7,9 @@ import { logger } from '../utils/logger';
 
 const SocketContext = createContext();
 
-const SOCKET_URL = Constants.expoConfig.extra.SOCKET_URL; 
+// Get SOCKET_URL from app.config.js, with safe fallback for web
+const expoConfig = Constants.expoConfig || Constants.manifest || {};
+const SOCKET_URL = expoConfig.extra?.SOCKET_URL || 'http://localhost:5000';
 
 export const useSocket = () => {
   const context = useContext(SocketContext);

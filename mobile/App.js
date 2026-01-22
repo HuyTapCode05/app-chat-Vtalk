@@ -26,6 +26,7 @@ import CallScreen from './src/screens/CallScreen';
 import CreateGroupScreen from './src/screens/CreateGroupScreen';
 import CreateStoryScreen from './src/screens/CreateStoryScreen';
 import StoryViewer from './src/screens/StoryViewer';
+import AdminScreen from './src/screens/AdminScreen';
 import IncomingCallHandler from './src/components/IncomingCallHandler';
 import { COLORS } from './src/utils/constants';
 import notificationService from './src/utils/notificationService';
@@ -378,6 +379,11 @@ function AppNavigator() {
                 presentation: 'modal',
                 gestureEnabled: true
               }}
+            />
+            <Stack.Screen 
+              name="Admin" 
+              component={AdminScreen}
+              options={{ title: 'Quản trị' }}
             />
           </>
         )}

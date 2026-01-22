@@ -119,6 +119,17 @@ const ProfileScreen = ({ navigation }) => {
           <Text style={[styles.menuText, { color: theme.text }]}>Trợ giúp</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
+
+        {user?.role === 'admin' && (
+          <TouchableOpacity
+            style={[styles.menuItem, { borderBottomColor: theme.divider }]}
+            onPress={() => navigation.navigate('Admin')}
+          >
+            <Ionicons name="shield" size={24} color={theme.primary} />
+            <Text style={[styles.menuText, { color: theme.text }]}>Quản trị</Text>
+            <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={[styles.section, { borderTopColor: theme.border }]}>

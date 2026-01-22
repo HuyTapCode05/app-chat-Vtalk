@@ -189,10 +189,6 @@ UPLOAD_PATH=./uploads
 - `call_request` - Voice/Video call request
 - `call_response` - Call response
 
-## 📱 App Icon Setup
-
-Để setup icon cho app khi build, xem [ICON_SETUP.md](mobile/ICON_SETUP.md)
-
 ## 📚 Documentation
 
 - [Build APK Guide](BUILD_APK_GUIDE.md) - Instructions for building APK
@@ -200,12 +196,6 @@ UPLOAD_PATH=./uploads
 - [Code Quality Improvements](CODE_QUALITY_IMPROVEMENTS.md) - Code quality guidelines
 - [New Features](TINH_NANG_MOI.md) - Latest feature additions
 - [Running APK Guide](HUONG_DAN_CHAY_APK.md) - APK installation guide
-- **[🚀 Optimizations](OPTIMIZATIONS.md)** - Complete list of all optimizations performed
-- **[🔒 Security Features](SECURITY_FEATURES.md)** - Security & family safety features
-- **[📈 Scalability Optimizations](SCALABILITY_OPTIMIZATIONS.md)** - Optimizations for handling many concurrent users
-- **[⚡ Client & Backend Optimizations](CLIENT_BACKEND_OPTIMIZATIONS.md)** - Client and backend performance optimizations
-- **[🎯 Advanced Optimizations](ADVANCED_OPTIMIZATIONS.md)** - Advanced image processing, caching, and batching optimizations
-- **[🏁 Final Optimizations](FINAL_OPTIMIZATIONS.md)** - Retry handlers, error recovery, performance monitoring, and database optimization
 
 ## 🤝 Contributing
 

@@ -6,34 +6,34 @@ import { logger } from '../utils/logger';
 // Theme Configuration
 export const THEMES = {
   light: {
-    // Main colors
+    // Main colors - Green theme
     primary: '#00B14F',
     primaryDark: '#008037',
     primaryLight: '#E6F9EE',
     
     // Background colors
-    background: '#FFFFFF',
-    surface: '#F5F5F5',
+    background: '#F2F2F7',
+    surface: '#FFFFFF',
     card: '#FFFFFF',
     
     // Text colors
     text: '#000000',
-    textSecondary: '#666666',
-    textMuted: '#999999',
+    textSecondary: '#8E8E93',
+    textMuted: '#C7C7CC',
     
     // Border and separator
-    border: '#E0E0E0',
-    divider: '#F0F0F0',
+    border: '#E5E5EA',
+    divider: '#F2F2F7',
     
     // Status colors
-    success: '#4CAF50',
-    warning: '#FF9800',
-    error: '#F44336',
-    info: '#2196F3',
+    success: '#34C759',
+    warning: '#FF9500',
+    error: '#FF3B30',
+    info: '#007AFF',
     
     // Chat specific
     messageOwn: '#00B14F',
-    messageOther: '#F0F0F0',
+    messageOther: '#E5E5EA',
     messageOwnText: '#FFFFFF',
     messageOtherText: '#000000',
     
@@ -44,20 +44,24 @@ export const THEMES = {
     // Tab bar
     tabBarBackground: '#FFFFFF',
     tabBarActive: '#00B14F',
-    tabBarInactive: '#999999',
+    tabBarInactive: '#8E8E93',
     
     // Input
-    inputBackground: '#F5F5F5',
-    inputBorder: '#E0E0E0',
+    inputBackground: '#F2F2F7',
+    inputBorder: 'transparent',
     inputText: '#000000',
-    placeholder: '#999999',
+    placeholder: '#8E8E93',
     
     // Modal and overlay
     modalBackground: '#FFFFFF',
-    overlay: 'rgba(0, 0, 0, 0.5)',
+    overlay: 'rgba(0, 0, 0, 0.4)',
     
     // Shadow
     shadowColor: '#000000',
+    
+    // Additional UI elements
+    onlineIndicator: '#34C759',
+    unreadBadge: '#FF3B30',
   },
   
   dark: {
@@ -67,28 +71,28 @@ export const THEMES = {
     primaryLight: '#1B3B1F',
     
     // Background colors
-    background: '#121212',
-    surface: '#1E1E1E',
-    card: '#2D2D2D',
+    background: '#000000',
+    surface: '#1C1C1E',
+    card: '#1C1C1E',
     
     // Text colors
     text: '#FFFFFF',
-    textSecondary: '#B3B3B3',
-    textMuted: '#666666',
+    textSecondary: '#8D8D93',
+    textMuted: '#48484A',
     
     // Border and separator
-    border: '#404040',
-    divider: '#2D2D2D',
+    border: '#38383A',
+    divider: '#2C2C2E',
     
     // Status colors
-    success: '#4CAF50',
-    warning: '#FF9800',
-    error: '#F44336',
-    info: '#2196F3',
+    success: '#30D158',
+    warning: '#FF9F0A',
+    error: '#FF453A',
+    info: '#0A84FF',
     
     // Chat specific
     messageOwn: '#00B14F',
-    messageOther: '#2D2D2D',
+    messageOther: '#2C2C2E',
     messageOwnText: '#FFFFFF',
     messageOtherText: '#FFFFFF',
     
@@ -99,20 +103,24 @@ export const THEMES = {
     // Tab bar
     tabBarBackground: '#1E1E1E',
     tabBarActive: '#00B14F',
-    tabBarInactive: '#666666',
+    tabBarInactive: '#8D8D93',
     
     // Input
-    inputBackground: '#2D2D2D',
-    inputBorder: '#404040',
+    inputBackground: '#2C2C2E',
+    inputBorder: 'transparent',
     inputText: '#FFFFFF',
-    placeholder: '#666666',
+    placeholder: '#8D8D93',
     
     // Modal and overlay
-    modalBackground: '#2D2D2D',
-    overlay: 'rgba(0, 0, 0, 0.8)',
+    modalBackground: '#1C1C1E',
+    overlay: 'rgba(0, 0, 0, 0.6)',
     
     // Shadow
     shadowColor: '#000000',
+    
+    // Additional UI elements
+    onlineIndicator: '#30D158',
+    unreadBadge: '#FF453A',
   }
 };
 

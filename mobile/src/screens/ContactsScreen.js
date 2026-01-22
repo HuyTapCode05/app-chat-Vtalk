@@ -854,7 +854,7 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: '#00B14F',
+    backgroundColor: '#34C759',
     borderWidth: 2,
     borderColor: '#fff',
   },
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   addFriendButton: {
-    backgroundColor: '#e8f5e9',
+    backgroundColor: '#E6F9EE',
   },
   pendingButton: {
     backgroundColor: '#fff3cd',

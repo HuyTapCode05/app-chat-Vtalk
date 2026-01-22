@@ -7,12 +7,16 @@ import {
   ScrollView,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { BASE_URL } from '../config/api';
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
+  const { theme } = useTheme();
 
   const handleLogout = async () => {
     // On web, use window.confirm for better compatibility
@@ -65,56 +69,62 @@ const ProfileScreen = ({ navigation }) => {
     navigation.navigate('Help');
   };
 
+  const avatarUrl = user?.avatar ? (user.avatar.startsWith('http') ? user.avatar : `${BASE_URL}${user.avatar}`) : null;
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-          </Text>
-        </View>
-        <Text style={styles.name}>{user?.fullName || 'User'}</Text>
-        <Text style={styles.username}>@{user?.username || 'username'}</Text>
-        <Text style={styles.email}>{user?.email || ''}</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.header, { backgroundColor: theme.surface }]}>
+        {avatarUrl ? (
+          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+            <Text style={styles.avatarText}>
+              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+            </Text>
+          </View>
+        )}
+        <Text style={[styles.name, { color: theme.text }]}>{user?.fullName || 'User'}</Text>
+        <Text style={[styles.username, { color: theme.textSecondary }]}>@{user?.username || 'username'}</Text>
+        <Text style={[styles.email, { color: theme.textMuted }]}>{user?.email || ''}</Text>
         <TouchableOpacity
-          style={styles.viewProfileButton}
+          style={[styles.viewProfileButton, { borderColor: theme.primary, backgroundColor: theme.primaryLight }]}
           onPress={() => navigation.navigate('PersonalPage', { userId: user?.id })}
         >
-          <Ionicons name="person-circle-outline" size={20} color="#00B14F" />
-          <Text style={styles.viewProfileText}>Xem trang cá nhân</Text>
+          <Ionicons name="person-circle-outline" size={20} color={theme.primary} />
+          <Text style={[styles.viewProfileText, { color: theme.primary }]}>Xem trang cá nhân</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.menuItem} onPress={handleEditProfile}>
-          <Ionicons name="person-outline" size={24} color="#00B14F" />
-          <Text style={styles.menuText}>Chỉnh sửa hồ sơ</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+      <View style={[styles.section, { borderTopColor: theme.border }]}>
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]} onPress={handleEditProfile}>
+          <Ionicons name="person-outline" size={24} color={theme.primary} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Chỉnh sửa hồ sơ</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleNotifications}>
-          <Ionicons name="notifications-outline" size={24} color="#00B14F" />
-          <Text style={styles.menuText}>Thông báo</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]} onPress={handleNotifications}>
+          <Ionicons name="notifications-outline" size={24} color={theme.primary} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Thông báo</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleSecurity}>
-          <Ionicons name="lock-closed-outline" size={24} color="#00B14F" />
-          <Text style={styles.menuText}>Bảo mật</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]} onPress={handleSecurity}>
+          <Ionicons name="lock-closed-outline" size={24} color={theme.primary} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Bảo mật</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem} onPress={handleHelp}>
-          <Ionicons name="help-circle-outline" size={24} color="#00B14F" />
-          <Text style={styles.menuText}>Trợ giúp</Text>
-          <Ionicons name="chevron-forward" size={20} color="#999" />
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]} onPress={handleHelp}>
+          <Ionicons name="help-circle-outline" size={24} color={theme.primary} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Trợ giúp</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <TouchableOpacity style={styles.menuItem} onPress={handleLogout}>
-          <Ionicons name="log-out-outline" size={24} color="#d32f2f" />
-          <Text style={[styles.menuText, styles.logoutText]}>Đăng xuất</Text>
+      <View style={[styles.section, { borderTopColor: theme.border }]}>
+        <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]} onPress={handleLogout}>
+          <Ionicons name="log-out-outline" size={24} color={theme.error} />
+          <Text style={[styles.menuText, styles.logoutText, { color: theme.error }]}>Đăng xuất</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -124,82 +134,76 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     alignItems: 'center',
     padding: 32,
-    backgroundColor: '#f8f9fa',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     marginBottom: 16,
   },
   avatarText: {
     color: '#fff',
     fontSize: 40,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   name: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: 26,
+    fontWeight: '700',
     marginBottom: 4,
+    letterSpacing: -0.5,
   },
   username: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 4,
   },
   email: {
     fontSize: 14,
-    color: '#999',
     marginBottom: 16,
   },
   viewProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#00B14F',
-    backgroundColor: '#f0fdf4',
   },
   viewProfileText: {
     marginLeft: 6,
-    fontSize: 14,
-    color: '#00B14F',
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '600',
   },
   section: {
     marginTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   menuText: {
     flex: 1,
-    fontSize: 16,
-    color: '#333',
+    fontSize: 17,
     marginLeft: 16,
   },
   logoutText: {
-    color: '#d32f2f',
+    fontWeight: '500',
   },
 });
 

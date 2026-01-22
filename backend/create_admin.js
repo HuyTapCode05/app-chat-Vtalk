@@ -8,8 +8,8 @@ const createAdmin = async () => {
   if (args.length < 3) {
     console.error('❌ Vui lòng cung cấp đủ thông tin: <username> <email> <password>');
     console.log('   Ví dụ: node create_admin.js admin admin@example.com securepassword123');
-    process.exit(1);
-  }
+  process.exit(1);
+}
 
   const [username, email, password] = args;
 
@@ -66,7 +66,7 @@ const createAdmin = async () => {
     console.log(`   - Username: ${username}`);
     console.log(`   - Email: ${email}`);
     console.log(`   - Password: [Mật khẩu bạn đã nhập]`);
-    
+
   } catch (error) {
     console.error('❌ Đã xảy ra lỗi khi tạo tài khoản admin:', error);
   } finally {

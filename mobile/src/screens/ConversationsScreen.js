@@ -8,7 +8,7 @@ import {
   Alert,
   RefreshControl,
   TextInput,
-  Image
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -19,7 +19,7 @@ import { useSocket } from '../context/SocketContext';
 import EmptyState from '../components/EmptyState';
 import StoryList from '../components/StoryList';
 
-const BASE_URL = 'http://192.168.1.5:5000';
+import { BASE_URL } from '../config/api';
 
 const ConversationsScreen = () => {
   const { user } = useAuth();
@@ -133,24 +133,41 @@ const ConversationsScreen = () => {
   );
 
   const renderConversationItem = ({ item }) => {
-    console.log('🎨 Rendering conversation item:', {
-      id: item._id || item.id,
-      hasParticipants: !!item.participants,
-      participantsCount: item.participants?.length || 0
-    });
-
     const displayName = getDisplayName(item);
     const conversationId = item._id || item.id;
+    
+    // Get other user info for avatar and online status
+    const otherUser = item.participants?.find(p => {
+      const pId = p._id || p.id || p;
+      return pId !== user?.id;
+    });
+    
+    const otherUserAvatar = typeof otherUser === 'object' ? otherUser.avatar : null;
+    const otherUserOnline = typeof otherUser === 'object' ? otherUser.isOnline : false;
+    const avatarUrl = otherUserAvatar ? (otherUserAvatar.startsWith('http') ? otherUserAvatar : `${BASE_URL}${otherUserAvatar}`) : null;
     
     return (
       <TouchableOpacity
         style={[styles.conversationItem, { backgroundColor: theme.card }]}
         onPress={() => handleSelectConversation(item)}
+        activeOpacity={0.7}
       >
-        <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-          <Text style={[styles.avatarText, { color: '#FFFFFF' }]}>
-            {String(displayName).charAt(0).toUpperCase()}
-          </Text>
+        <View style={styles.avatarContainer}>
+          {avatarUrl ? (
+            <Image 
+              source={{ uri: avatarUrl }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+              <Text style={[styles.avatarText, { color: '#FFFFFF' }]}>
+                {String(displayName).charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+          {otherUserOnline && (
+            <View style={[styles.onlineIndicator, { backgroundColor: theme.onlineIndicator }]} />
+          )}
         </View>
 
         {/* Content */}
@@ -254,16 +271,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchContainer: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    padding: 12,
+    paddingBottom: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchInput: {
     flex: 1,
@@ -274,19 +296,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    alignItems: 'center',
-    justifyContent: 'center',
+  avatarContainer: {
+    position: 'relative',
     marginRight: 12,
   },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
   avatarText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  onlineIndicator: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   conversationInfo: {
     flex: 1,
@@ -298,16 +338,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   conversationName: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
     flex: 1,
     marginRight: 8,
+    letterSpacing: -0.3,
   },
   time: {
-    fontSize: 12,
+    fontSize: 13,
+    fontWeight: '400',
   },
   lastMessage: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 20,
+    marginTop: 2,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

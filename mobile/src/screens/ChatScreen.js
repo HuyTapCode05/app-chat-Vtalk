@@ -1241,7 +1241,7 @@ const ChatScreen = ({ route, navigation }) => {
                         <Ionicons
                           name="checkmark-done"
                           size={14}
-                          color="#4CAF50"
+                          color="#34C759"
                           style={styles.readIcon}
                         />
                         <Text style={styles.readStatusText}>Đã xem</Text>
@@ -1342,7 +1342,7 @@ const ChatScreen = ({ route, navigation }) => {
                   setSearchResults([]);
                 }
               }}
-              placeholderTextColor="#999"
+              placeholderTextColor="#8E8E93"
             />
             <TouchableOpacity
               onPress={() => {
@@ -1392,7 +1392,7 @@ const ChatScreen = ({ route, navigation }) => {
         {/* Pinned Messages Header */}
         {!showSearch && pinnedMessages.length > 0 && (
           <View style={styles.pinnedHeader}>
-            <Ionicons name="pin" size={16} color="#00B14F" />
+              <Ionicons name="pin" size={16} color="#00B14F" />
             <Text style={styles.pinnedHeaderText}>
               {pinnedMessages.length} tin nhắn đã ghim
             </Text>
@@ -1490,7 +1490,7 @@ const ChatScreen = ({ route, navigation }) => {
           <Ionicons
             name="happy-outline"
             size={24}
-            color={showEmojiPicker ? '#00B14F' : '#666'}
+            color={showEmojiPicker ? '#00B14F' : '#8E8E93'}
           />
         </TouchableOpacity>
 
@@ -1674,7 +1674,7 @@ const ChatScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E5E5E5',
+    backgroundColor: '#F2F2F7',
     position: 'relative',
   },
   keyboardContainer: {
@@ -1733,7 +1733,8 @@ const styles = StyleSheet.create({
   },
   messageBubble: {
     maxWidth: '75%',
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderRadius: 18,
   },
   ownBubble: {
@@ -1741,7 +1742,7 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 4,
   },
   otherBubble: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
     borderBottomLeftRadius: 4,
   },
   senderName: {
@@ -1795,7 +1796,7 @@ const styles = StyleSheet.create({
   },
   readStatusText: {
     fontSize: 11,
-    color: '#4CAF50',
+    color: '#34C759',
     marginLeft: 2,
   },
   readStatusTextGray: {
@@ -1804,9 +1805,10 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     padding: 12,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E5E5EA',
     alignItems: 'flex-end',
   },
   iconButton: {
@@ -1815,22 +1817,28 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0,
+    backgroundColor: '#F2F2F7',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     maxHeight: 100,
     fontSize: 16,
-    marginRight: 4,
+    marginRight: 8,
+    minHeight: 40,
   },
   sendButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#00B14F',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#00B14F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   micButton: {
     width: 44,
@@ -1895,10 +1903,10 @@ const styles = StyleSheet.create({
   pinnedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f0f7ff',
+    backgroundColor: '#E6F9EE',
     padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5EA',
   },
   pinnedHeaderText: {
     flex: 1,

@@ -4,8 +4,9 @@ module.exports = {
   expo: {
     name: "VTalk",
     extra: {
-      API_URL: process.env.API_URL || 'http://192.168.1.13:5000/api',
-      SOCKET_URL: process.env.SOCKET_URL || 'http://192.168.1.13:5000',
+      API_URL: process.env.API_URL || 'http://192.168.1.4:5000/api',
+      SOCKET_URL: process.env.SOCKET_URL || 'http://192.168.1.4:5000',
+      EXPO_PROJECT_ID: process.env.EXPO_PROJECT_ID || 'vtalk-demo-project',
     },
     slug: "vtalk",
     scheme: "vtalk",

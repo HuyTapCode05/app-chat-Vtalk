@@ -4,8 +4,8 @@
  */
 
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -27,8 +27,9 @@ class NotificationService {
    * Register for push notifications
    */
   async registerForPushNotifications() {
-    if (!Device.isDevice) {
-      console.warn('⚠️ Must use physical device for Push Notifications');
+    // Check if running on web (not supported for push notifications)
+    if (Platform.OS === 'web') {
+      console.warn('⚠️ Push notifications not supported on web');
       return null;
     }
 
@@ -48,8 +49,18 @@ class NotificationService {
       }
 
       // Get Expo push token
+      // Get projectId from app.config.js
+      const expoConfig = Constants.expoConfig || Constants.manifest || {};
+      const projectId = expoConfig.extra?.EXPO_PROJECT_ID || expoConfig.projectId;
+      
+      // Skip push token registration if no valid projectId (Expo Go limitation)
+      if (!projectId || projectId === 'vtalk-demo-project') {
+        console.warn('⚠️ Push notifications require a valid Expo project ID. Using local notifications only.');
+        return null;
+      }
+      
       const token = await Notifications.getExpoPushTokenAsync({
-        projectId: 'your-expo-project-id', // Cần update với project ID thực tế
+        projectId: projectId,
       });
 
       this.expoPushToken = token.data;
@@ -180,6 +191,26 @@ class NotificationService {
    */
   async setBadgeCount(count) {
     await Notifications.setBadgeCountAsync(count);
+  }
+
+  /**
+   * Initialize notification service
+   */
+  async initialize() {
+    try {
+      await this.registerForPushNotifications();
+      // Setup default listeners if needed
+      // Can be customized later with setupListeners()
+    } catch (error) {
+      console.error('Error initializing notification service:', error);
+    }
+  }
+
+  /**
+   * Cleanup notification service
+   */
+  cleanup() {
+    this.removeListeners();
   }
 }
 

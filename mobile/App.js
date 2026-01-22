@@ -29,7 +29,7 @@ import StoryViewer from './src/screens/StoryViewer';
 import AdminScreen from './src/screens/AdminScreen';
 import IncomingCallHandler from './src/components/IncomingCallHandler';
 import { COLORS } from './src/utils/constants';
-import notificationService from './src/utils/notificationService';
+import notificationService from './src/services/notificationService';
 
 // Web-compatible button component for header
 const HeaderButton = ({ onPress, children, style }) => {

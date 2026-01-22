@@ -691,7 +691,9 @@ const ChatScreen = ({ route, navigation }) => {
   const loadMessages = async (conversationId) => {
     try {
       const res = await api.get(`/messages/${conversationId}`);
-      setMessages(res.data);
+      // API returns { messages: [...], hasMore: ... }
+      const messagesArray = Array.isArray(res.data) ? res.data : (res.data.messages || []);
+      setMessages(messagesArray);
       setTimeout(() => scrollToBottom(), 100);
       
       // Load pinned messages
@@ -766,8 +768,8 @@ const ChatScreen = ({ route, navigation }) => {
     }
   };
 
-  const handleSend = () => {
-    if (!socket || !conversation || !inputMessage.trim()) {
+  const handleSend = async () => {
+    if (!conversation || !inputMessage.trim()) {
       console.warn('⚠️ Cannot send message:', { socket: !!socket, conversation: !!conversation, hasMessage: !!inputMessage.trim() });
       return;
     }
@@ -790,14 +792,8 @@ const ChatScreen = ({ route, navigation }) => {
       conversationId, 
       senderId: user.id, 
       contentLength: messageContent.length,
-      type: 'text'
-    });
-    
-    socket.emit('send-message', {
-      conversationId: conversationId,
-      senderId: user.id,
-      content: messageContent,
       type: 'text',
+      hasSocket: !!socket
     });
     
     // Optimistically add message to UI (will be replaced by server response)
@@ -812,11 +808,51 @@ const ChatScreen = ({ route, navigation }) => {
       readBy: [],
       isTemp: true
     };
-    setMessages((prev) => [...prev, tempMessage]);
+    setMessages((prev) => {
+      if (!Array.isArray(prev)) return [tempMessage];
+      return [...prev, tempMessage];
+    });
     scrollToBottom();
-    
     setInputMessage('');
     setShowEmojiPicker(false);
+    
+    // Try socket first, fallback to API if socket not available
+    if (socket && (socket.connected || socket.io?.readyState === 'open')) {
+      socket.emit('send-message', {
+        conversationId: conversationId,
+        senderId: user.id,
+        content: messageContent,
+        type: 'text',
+      });
+    } else {
+      // Fallback: Send via API
+      try {
+        console.log('📤 Socket not available, sending via API...');
+        const response = await api.post('/messages', {
+          conversationId: conversationId,
+          content: messageContent,
+          type: 'text',
+        });
+        
+        if (response.data && response.data._id) {
+          // Replace temp message with real message
+          setMessages((prev) => {
+            if (!Array.isArray(prev)) return prev;
+            return prev.map(msg => msg._id === tempId ? response.data : msg);
+          });
+        }
+      } catch (error) {
+        console.error('❌ Error sending message via API:', error);
+        // Remove temp message on error
+        setMessages((prev) => {
+          if (!Array.isArray(prev)) return prev;
+          return prev.filter(msg => msg._id !== tempId);
+        });
+        Alert.alert('Lỗi', 'Không thể gửi tin nhắn. Vui lòng thử lại.');
+        // Restore input message
+        setInputMessage(messageContent);
+      }
+    }
   };
 
   const handlePickImage = async () => {

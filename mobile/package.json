@@ -42,8 +42,7 @@
     "react-native-webrtc": "^124.0.7",
     "socket.io-client": "^4.6.1",
     "crypto-js": "^4.2.0",
-    "expo-linking": "~7.0.4",
-    "expo-device": "~7.0.4"
+    "expo-linking": "~7.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",

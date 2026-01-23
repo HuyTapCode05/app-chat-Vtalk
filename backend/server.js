@@ -141,8 +141,9 @@ initDatabase()
       await databaseOptimizer.optimize();
     }, 24 * 60 * 60 * 1000);
     
-    server.listen(config.port, () => {
-      console.log(`🚀 Server đang chạy tại port ${config.port}`);
+    const HOST = process.env.HOST || '0.0.0.0';
+    server.listen(config.port, HOST, () => {
+      console.log(`🚀 Server đang chạy tại http://${HOST}:${config.port}`);
       console.log(`🌍 Environment: ${config.nodeEnv}`);
       console.log(`✅ Database: SQLite (${config.database.path})`);
       console.log(`✅ Messages: JSON files (data/messages/)`);
@@ -150,6 +151,7 @@ initDatabase()
       console.log(`📁 Uploads folder: ${path.join(__dirname, config.upload.destination)}`);
       console.log(`💾 Memory manager: Active`);
       console.log(`🗜️ Compression: Enabled`);
+      console.log(`🌐 Server accessible from network at http://192.168.1.4:${config.port}`);
     });
   })
   .catch(err => {

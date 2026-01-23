@@ -208,3 +208,25 @@ export const unique = (array, key) => {
   });
 };
 
+/**
+ * Safe navigation goBack - checks if can go back before calling goBack()
+ * @param {object} navigation - Navigation object from React Navigation
+ * @param {string} fallbackRoute - Optional fallback route if can't go back
+ */
+export const safeGoBack = (navigation, fallbackRoute = null) => {
+  if (!navigation) {
+    console.warn('⚠️ safeGoBack: navigation object is required');
+    return;
+  }
+
+  if (navigation.canGoBack && navigation.canGoBack()) {
+    navigation.goBack();
+  } else if (fallbackRoute) {
+    navigation.navigate(fallbackRoute);
+  } else {
+    // If no fallback route and can't go back, try to navigate to a default screen
+    // This prevents the "GO_BACK was not handled" error
+    console.log('ℹ️ Cannot go back, no fallback route provided');
+  }
+};
+

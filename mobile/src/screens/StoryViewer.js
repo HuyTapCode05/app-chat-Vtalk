@@ -15,6 +15,7 @@ import { Video } from 'expo-av';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import api, { BASE_URL } from '../config/api';
+import { safeGoBack } from '../utils/helpers';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -93,7 +94,7 @@ const StoryViewer = ({ route, navigation }) => {
     if (currentStoryIndex < stories.length - 1) {
       setCurrentStoryIndex(currentStoryIndex + 1);
     } else {
-      navigation.goBack();
+      safeGoBack(navigation, 'Home');
     }
   };
 
@@ -101,7 +102,7 @@ const StoryViewer = ({ route, navigation }) => {
     if (currentStoryIndex > 0) {
       setCurrentStoryIndex(currentStoryIndex - 1);
     } else {
-      navigation.goBack();
+      safeGoBack(navigation, 'Home');
     }
   };
 
@@ -166,7 +167,7 @@ const StoryViewer = ({ route, navigation }) => {
               // Remove story from list and continue
               const updatedStories = stories.filter((_, index) => index !== currentStoryIndex);
               if (updatedStories.length === 0) {
-                navigation.goBack();
+                safeGoBack(navigation, 'Home');
               } else if (currentStoryIndex >= updatedStories.length) {
                 setCurrentStoryIndex(updatedStories.length - 1);
               }
@@ -310,7 +311,7 @@ const StoryViewer = ({ route, navigation }) => {
               </TouchableOpacity>
             </>
           )}
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.actionButton}>
+          <TouchableOpacity onPress={() => safeGoBack(navigation, 'Home')} style={styles.actionButton}>
             <Ionicons name="close" size={24} color="white" />
           </TouchableOpacity>
         </View>

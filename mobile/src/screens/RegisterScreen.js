@@ -21,6 +21,7 @@ import { handleApiError } from '../utils/errorHandler';
 import { validateEmail, validatePassword, validateUsername, validateFullName } from '../utils/validation';
 import { COLORS } from '../utils/constants';
 import { logger } from '../utils/logger';
+import { safeGoBack } from '../utils/helpers';
 
 // Web-compatible alert helper
 const showAlert = (title, message, buttons) => {
@@ -232,7 +233,7 @@ const RegisterScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => navigation.goBack()}
+              onPress={() => safeGoBack(navigation, 'Login')}
               style={styles.linkButton}
             >
               <Text style={styles.linkText}>

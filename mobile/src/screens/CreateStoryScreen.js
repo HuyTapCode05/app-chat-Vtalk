@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import api, { BASE_URL } from '../config/api';
+import { safeGoBack } from '../utils/helpers';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -151,7 +152,7 @@ const CreateStoryScreen = ({ navigation }) => {
       if (response.data.success) {
         console.log('✅ Story created successfully');
         Alert.alert('Thành công', 'Đã đăng story', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { text: 'OK', onPress: () => safeGoBack(navigation, 'Home') }
         ]);
       }
     } catch (error) {
@@ -198,7 +199,7 @@ const CreateStoryScreen = ({ navigation }) => {
     <View style={[styles.container, { backgroundColor: colors.background || (isDarkMode ? '#121212' : '#FFFFFF') }]}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0') }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => safeGoBack(navigation, 'Home')}>
           <Ionicons name="close" size={24} color={colors.text || (isDarkMode ? '#FFFFFF' : '#000000')} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}>

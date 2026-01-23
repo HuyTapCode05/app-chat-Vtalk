@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import storage from '../utils/storage';
+import { safeGoBack } from '../utils/helpers';
 
 const EditProfileScreen = ({ navigation }) => {
   const { user, setUser } = useAuth();
@@ -52,7 +53,7 @@ const EditProfileScreen = ({ navigation }) => {
       await storage.setItem('user', JSON.stringify(updatedUser));
       
       Alert.alert('Thành công', 'Đã cập nhật hồ sơ');
-      navigation.goBack();
+      safeGoBack(navigation, 'Profile');
     } catch (error) {
       const message = error.response?.data?.message || 'Không thể cập nhật hồ sơ';
       Alert.alert('Lỗi', message);

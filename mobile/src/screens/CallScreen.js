@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { safeGoBack } from '../utils/helpers';
 
 // Dynamically import RTCView for video rendering
 let RTCView = null;
@@ -41,7 +42,7 @@ const CallScreen = ({ route, navigation }) => {
   // Validate params
   if (!userId || !callId) {
     console.error('❌ Missing required call params:', { userId, callId });
-    navigation.goBack();
+    safeGoBack(navigation, 'Conversations');
     return null;
   }
 
@@ -113,7 +114,7 @@ const CallScreen = ({ route, navigation }) => {
       } else {
         console.error('❌ Cannot start call:', { socket: !!socket, currentUserId, userId });
         Alert.alert('Lỗi', 'Không thể thực hiện cuộc gọi. Vui lòng thử lại.');
-        navigation.goBack();
+        safeGoBack(navigation, 'Conversations');
       }
     }
 
@@ -201,7 +202,7 @@ const CallScreen = ({ route, navigation }) => {
           if (Platform.OS !== 'web') {
             Vibration.cancel();
           }
-          navigation.goBack();
+          safeGoBack(navigation, 'Conversations');
         }
       };
 
@@ -214,7 +215,7 @@ const CallScreen = ({ route, navigation }) => {
           if (Platform.OS !== 'web') {
             Vibration.cancel();
           }
-          navigation.goBack();
+          safeGoBack(navigation, 'Conversations');
         }
       };
 
@@ -344,7 +345,7 @@ const CallScreen = ({ route, navigation }) => {
     if (Platform.OS !== 'web') {
       Vibration.cancel();
     }
-    navigation.goBack();
+    safeGoBack(navigation, 'Conversations');
   };
 
   const endCall = async () => {
@@ -383,7 +384,7 @@ const CallScreen = ({ route, navigation }) => {
       console.error('Error resetting audio mode:', error);
     }
     
-    navigation.goBack();
+    safeGoBack(navigation, 'Conversations');
   };
 
   const toggleMute = async () => {

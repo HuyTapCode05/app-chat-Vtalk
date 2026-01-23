@@ -24,6 +24,7 @@ import { COLORS } from '../utils/constants';
 import { Ionicons } from '@expo/vector-icons';
 import storage from '../utils/storage';
 import { STORAGE_KEYS } from '../utils/constants';
+import { safeGoBack } from '../utils/helpers';
 
 const VerifyEmailScreen = ({ route, navigation }) => {
   const { user, setUser, logout } = useAuth();
@@ -209,7 +210,7 @@ const VerifyEmailScreen = ({ route, navigation }) => {
               );
             } else {
               // Nếu chưa đăng nhập, chỉ cần quay về Register
-              navigation.goBack();
+              safeGoBack(navigation, 'Register');
             }
           }}
         >

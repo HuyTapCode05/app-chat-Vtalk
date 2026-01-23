@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
+import { safeGoBack } from '../utils/helpers';
 
 const AdminScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -32,7 +33,7 @@ const AdminScreen = ({ navigation }) => {
       loadData();
     } else {
       Alert.alert('Không có quyền', 'Bạn không có quyền truy cập trang này');
-      navigation.goBack();
+      safeGoBack(navigation, 'Home');
     }
   }, [user]);
 

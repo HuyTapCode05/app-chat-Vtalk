@@ -29,7 +29,7 @@ import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import VoiceMessage from '../components/VoiceMessage';
 import { MessageSkeleton } from '../components/Skeleton';
-import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar } from '../utils/helpers';
+import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar, safeGoBack } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
 import { COLORS, STORAGE_KEYS, REACTIONS, MESSAGE_TYPES } from '../utils/constants';
 
@@ -1611,14 +1611,14 @@ const ChatScreen = ({ route, navigation }) => {
         }}
         onDissolve={() => {
           // Navigate back to conversations list after dissolving group
-          navigation.goBack();
+          safeGoBack(navigation, 'Conversations');
         }}
         onDelete={async () => {
           try {
             const conversationId = conversation?._id || conversation?.id;
             await api.delete(`/conversations/${conversationId}`);
             // Navigate back to conversations list after deleting
-            navigation.goBack();
+            safeGoBack(navigation, 'Conversations');
           } catch (error) {
             console.error('Error deleting conversation:', error);
             handleApiError(error, 'Không thể xóa cuộc trò chuyện');
@@ -1694,7 +1694,7 @@ const ChatScreen = ({ route, navigation }) => {
             setShowChatHeaderMenu(false);
             // Navigate back to conversations list after deleting
             // Use goBack first, then navigate to ensure refresh
-            navigation.goBack();
+            safeGoBack(navigation, 'Conversations');
             // Small delay to ensure navigation completes, then navigate to Messages tab
             setTimeout(() => {
               navigation.navigate('MainTabs', { screen: 'Messages' });

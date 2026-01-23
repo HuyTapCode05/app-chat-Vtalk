@@ -1,11 +1,31 @@
 require('dotenv').config();
 
+// Auto-detect local IP address
+function getLocalIP() {
+  const os = require('os');
+  const interfaces = os.networkInterfaces();
+  
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  
+  return '127.0.0.1';
+}
+
+const LOCAL_IP = process.env.LOCAL_IP || getLocalIP();
+const DEFAULT_API_URL = `http://${LOCAL_IP}:5000/api`;
+const DEFAULT_SOCKET_URL = `http://${LOCAL_IP}:5000`;
+
 module.exports = {
   expo: {
     name: "VTalk",
     extra: {
-      API_URL: process.env.API_URL || 'http://192.168.1.4:5000/api',
-      SOCKET_URL: process.env.SOCKET_URL || 'http://192.168.1.4:5000',
+      API_URL: process.env.API_URL || DEFAULT_API_URL,
+      SOCKET_URL: process.env.SOCKET_URL || DEFAULT_SOCKET_URL,
       EXPO_PROJECT_ID: process.env.EXPO_PROJECT_ID || 'vtalk-demo-project',
     },
     slug: "vtalk",

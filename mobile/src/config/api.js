@@ -68,8 +68,8 @@ api.interceptors.response.use(
       const isAuthCheck = url.includes('/auth/me');
       
       try {
-        await storage.removeItem(STORAGE_KEYS.TOKEN);
-        await storage.removeItem(STORAGE_KEYS.USER);
+        await secureStorage.removeItem(STORAGE_KEYS.TOKEN);
+        await secureStorage.removeItem(STORAGE_KEYS.USER);
         if (!isAuthCheck) {
           logger.info('Auth token cleared due to 401');
         }

@@ -28,6 +28,7 @@ import ContactMenu from '../components/ContactMenu';
 import VoiceRecorder from '../components/VoiceRecorder';
 import VoicePlayer from '../components/VoicePlayer';
 import VoiceMessage from '../components/VoiceMessage';
+import MentionOverlay from '../components/MentionOverlay';
 import { MessageSkeleton } from '../components/Skeleton';
 import { getUserId, getConversationId, getMessageId, getUserDisplayName, getImageUrl, getFirstChar, safeGoBack } from '../utils/helpers';
 import { handleApiError } from '../utils/errorHandler';
@@ -90,6 +91,8 @@ const ChatScreen = ({ route, navigation }) => {
   const [showChatHeaderMenu, setShowChatHeaderMenu] = useState(false);
   const [otherParticipantInfo, setOtherParticipantInfo] = useState(null);
   const [wallpaper, setWallpaper] = useState(null);
+  const [showMentionOverlay, setShowMentionOverlay] = useState(false);
+  const [mentionSearchText, setMentionSearchText] = useState('');
   const typingTimeoutRef = useRef(null);
   const flatListRef = useRef(null);
 
@@ -766,6 +769,63 @@ const ChatScreen = ({ route, navigation }) => {
     if (flatListRef.current && messages.length > 0) {
       flatListRef.current.scrollToEnd({ animated: true });
     }
+  };
+
+  // Handle @ mention
+  const handleMentionInput = (text) => {
+    setInputMessage(text);
+    
+    // Check for @ mention
+    const atIndex = text.lastIndexOf('@');
+    if (atIndex >= 0) {
+      const afterAt = text.substring(atIndex + 1);
+      
+      // If @ is followed by space, close overlay
+      if (afterAt.includes(' ')) {
+        setShowMentionOverlay(false);
+        return;
+      }
+      
+      // Show overlay if @ is the last character or followed by text without space
+      if (!afterAt.includes(' ')) {
+        setShowMentionOverlay(true);
+        setMentionSearchText(afterAt);
+      }
+    } else {
+      setShowMentionOverlay(false);
+    }
+  };
+
+  const handleSelectMember = (member) => {
+    // Find the last @ and replace it with mention
+    const atIndex = inputMessage.lastIndexOf('@');
+    if (atIndex >= 0) {
+      const beforeAt = inputMessage.substring(0, atIndex);
+      const username = member.username || member.name;
+      const newMessage = beforeAt + '@' + username + ' ';
+      setInputMessage(newMessage);
+      setShowMentionOverlay(false);
+      setMentionSearchText('');
+    }
+  };
+
+  const getConversationMembers = () => {
+    if (!conversation?.participants) return [];
+    
+    return conversation.participants
+      .filter(p => {
+        const id = p._id || p.id;
+        return id !== user?.id && id !== user?._id;
+      })
+      .map(p => ({
+        id: p._id || p.id,
+        _id: p._id || p.id,
+        username: p.username || p.name,
+        name: p.name || p.username,
+        fullName: p.fullName || p.displayName,
+        displayName: p.displayName || p.fullName,
+        avatar: p.avatar,
+      }));
   };
 
   const handleSend = async () => {
@@ -1510,10 +1570,10 @@ const ChatScreen = ({ route, navigation }) => {
 
         <TextInput
           style={styles.input}
-          placeholder="Nhập tin nhắn..."
+          placeholder="Nhập tin nhắn... (gõ @ để mention)"
           value={inputMessage}
           onChangeText={(text) => {
-            setInputMessage(text);
+            handleMentionInput(text);
             // Emit typing indicator
             if (socket && conversation) {
               const conversationId = conversation._id || conversation.id;
@@ -1563,6 +1623,19 @@ const ChatScreen = ({ route, navigation }) => {
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Mention Overlay */}
+      {showMentionOverlay && (
+        <MentionOverlay
+          visible={showMentionOverlay}
+          members={getConversationMembers()}
+          searchText={mentionSearchText}
+          onSelectMember={handleSelectMember}
+          onSearchChange={setMentionSearchText}
+          theme={theme}
+          isDarkMode={theme?.isDarkMode}
+        />
+      )}
 
       <MessageMenu
         visible={menuVisible}

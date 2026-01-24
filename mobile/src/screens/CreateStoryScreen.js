@@ -9,6 +9,7 @@ import {
   Image,
   ScrollView,
   Dimensions,
+  Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import api, { BASE_URL } from '../config/api';
 import { safeGoBack } from '../utils/helpers';
+import storage from '../utils/storage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -101,12 +103,19 @@ const CreateStoryScreen = ({ navigation }) => {
   };
 
   const createStory = async () => {
+    // Check if user is logged in
+    if (!currentUser) {
+      Alert.alert('Lỗi', 'Bạn cần đăng nhập để tạo story');
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('📱 Creating story...', {
         type: storyType,
         hasContent: !!(content && content.trim()),
-        hasMedia: !!mediaUri
+        hasMedia: !!mediaUri,
+        userId: currentUser?.id || currentUser?._id
       });
 
       const formData = new FormData();
@@ -114,6 +123,7 @@ const CreateStoryScreen = ({ navigation }) => {
 
       if (storyType === 'text') {
         if (!content || !content.trim()) {
+          setLoading(false);
           Alert.alert('Lỗi', 'Vui lòng nhập nội dung story');
           return;
         }
@@ -122,17 +132,31 @@ const CreateStoryScreen = ({ navigation }) => {
         formData.append('textColor', textColor);
       } else {
         if (!mediaUri) {
+          setLoading(false);
           Alert.alert('Lỗi', 'Vui lòng chọn ảnh hoặc video');
           return;
         }
 
-        // Add media file
-        const mediaFile = {
-          uri: mediaUri,
-          type: storyType === 'image' ? 'image/jpeg' : 'video/mp4',
-          name: `story_${Date.now()}.${storyType === 'image' ? 'jpg' : 'mp4'}`
-        };
-        formData.append('media', mediaFile);
+        // Add media file - format must match React Native FormData requirements
+        const fileExtension = storyType === 'image' ? 'jpg' : 'mp4';
+        const mimeType = storyType === 'image' ? 'image/jpeg' : 'video/mp4';
+        const fileName = `story_${Date.now()}.${fileExtension}`;
+        
+        // Handle URI for iOS (remove file:// prefix) and Android
+        const processedUri = Platform.OS === 'ios' ? mediaUri.replace('file://', '') : mediaUri;
+        
+        formData.append('media', {
+          uri: processedUri,
+          type: mimeType,
+          name: fileName
+        });
+        
+        console.log('📎 Appending media file:', {
+          uri: processedUri,
+          type: mimeType,
+          name: fileName,
+          platform: Platform.OS
+        });
 
         // Add caption if any
         if (content && content.trim()) {
@@ -143,21 +167,102 @@ const CreateStoryScreen = ({ navigation }) => {
         }
       }
 
-      const response = await api.post('/stories', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      // Use fetch instead of axios for FormData upload (axios has issues with FormData)
+      // Use same storage method as other upload screens for consistency
+      const token = await storage.getItem('token');
+      
+      if (!token) {
+        Alert.alert('Lỗi', 'Bạn cần đăng nhập để tạo story');
+        setLoading(false);
+        return;
+      }
+
+      // Ensure BASE_URL is valid
+      if (!BASE_URL) {
+        console.error('❌ BASE_URL is undefined or empty');
+        throw new Error('BASE_URL không được cấu hình');
+      }
+
+      const uploadUrl = `${BASE_URL}/api/stories`;
+      console.log('📤 Uploading story with fetch...', {
+        url: uploadUrl,
+        baseUrl: BASE_URL,
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        hasFormData: !!formData,
+        formDataKeys: formData._parts?.map(p => p[0]) || [],
+        storyType: storyType,
+        hasMedia: !!mediaUri
       });
 
-      if (response.data.success) {
-        console.log('✅ Story created successfully');
-        Alert.alert('Thành công', 'Đã đăng story', [
-          { text: 'OK', onPress: () => safeGoBack(navigation, 'Home') }
-        ]);
+      // Add timeout to fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+      try {
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            // Don't set Content-Type, let fetch set it automatically with boundary
+          },
+          body: formData,
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+
+        const responseText = await response.text();
+        console.log('📥 Story upload response:', {
+          status: response.status,
+          ok: response.ok,
+          text: responseText.substring(0, 200)
+        });
+
+        if (!response.ok) {
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+          } catch {
+            errorData = { message: responseText || 'Upload failed' };
+          }
+          throw new Error(errorData.message || 'Không thể tạo story');
+        }
+
+        const result = JSON.parse(responseText);
+
+        if (result.success) {
+          console.log('✅ Story created successfully');
+          Alert.alert('Thành công', 'Đã đăng story', [
+            { text: 'OK', onPress: () => safeGoBack(navigation, 'Home') }
+          ]);
+        } else {
+          throw new Error(result.message || 'Không thể tạo story');
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timeout. Vui lòng thử lại.');
+        }
+        throw fetchError;
       }
     } catch (error) {
       console.error('❌ Error creating story:', error);
-      const message = error.response?.data?.message || 'Không thể tạo story';
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack?.substring(0, 200)
+      });
+      
+      let message = 'Không thể tạo story';
+      if (error.message?.includes('Network request failed')) {
+        message = 'Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet và thử lại.';
+      } else if (error.message) {
+        message = error.message;
+      } else if (error.response?.data?.message) {
+        message = error.response.data.message;
+      }
+      
       Alert.alert('Lỗi', message);
     } finally {
       setLoading(false);

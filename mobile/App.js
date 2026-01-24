@@ -1,6 +1,23 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Pressable, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Pressable, Platform, LogBox } from 'react-native';
 import { NavigationContainer, useNavigation } from '@react-navigation/native';
+
+// Suppress known warnings that don't affect functionality
+if (LogBox) {
+  LogBox.ignoreLogs([
+    /expo-av/, // expo-av deprecated warning (will migrate to expo-audio/expo-video later)
+    /expo-notifications/, // expo-notifications limitations in Expo Go (expected behavior)
+    /Android Push notifications/, // Push notifications require development build
+    /expo-notifications functionality is not fully supported/, // Expected in Expo Go
+    /development build/, // Development build warnings
+  ]);
+  
+  // Also ignore all warnings in production (optional)
+  if (__DEV__) {
+    // In development, we still want to see important warnings
+    // but suppress the known ones above
+  }
+}
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';

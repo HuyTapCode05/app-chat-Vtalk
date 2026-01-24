@@ -3,7 +3,7 @@
  * User registration screen
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -61,8 +61,14 @@ const RegisterScreen = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
+  const isSubmittingRef = useRef(false); // Prevent double submission
 
   const handleRegister = useCallback(async () => {
+    // Prevent double submission
+    if (isSubmittingRef.current || loading) {
+      return;
+    }
+
     // Validate all fields
     const fullNameError = validateFullName(formData.fullName);
     if (fullNameError) {
@@ -93,6 +99,8 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
+    // Set loading state immediately to prevent double clicks
+    isSubmittingRef.current = true;
     setLoading(true);
     try {
       logger.info('Starting registration...', { email: formData.email, username: formData.username });
@@ -169,8 +177,9 @@ const RegisterScreen = ({ navigation }) => {
       }
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
-  }, [formData, register, navigation]);
+  }, [formData, register, navigation, loading]);
 
   return (
     <KeyboardAvoidingView
@@ -220,10 +229,10 @@ const RegisterScreen = ({ navigation }) => {
             />
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, (loading || isSubmittingRef.current) && styles.buttonDisabled]}
               onPress={handleRegister}
-              disabled={loading}
-              activeOpacity={0.7}
+              disabled={loading || isSubmittingRef.current}
+              activeOpacity={loading || isSubmittingRef.current ? 1 : 0.7}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />

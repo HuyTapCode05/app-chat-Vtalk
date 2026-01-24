@@ -78,7 +78,18 @@ class NotificationService {
 
       return this.expoPushToken;
     } catch (error) {
-      console.error('Error registering for push notifications:', error);
+      // In Expo Go, push notifications are not fully supported - this is expected
+      const isExpoGoError = error.message?.includes('Expo Go') || 
+                           error.message?.includes('development build') ||
+                           error.message?.includes('projectId');
+      
+      if (isExpoGoError) {
+        // Silently handle Expo Go limitations (expected behavior)
+        return null;
+      }
+      
+      // Only log actual errors, not Expo Go limitations
+      console.warn('⚠️ Push notification registration issue:', error.message);
       return null;
     }
   }

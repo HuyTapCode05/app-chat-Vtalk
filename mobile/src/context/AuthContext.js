@@ -33,10 +33,21 @@ export const AuthProvider = ({ children }) => {
     };
 
     testBackendConnection();
-    checkAuth().catch((error) => {
-      console.error('checkAuth error:', error);
+    
+    // Set timeout to ensure loading state doesn't hang forever
+    const loadingTimeout = setTimeout(() => {
+      console.warn('⚠️ Auth check timeout, setting loading to false');
       setLoading(false);
-    });
+    }, 5000); // 5 second timeout
+
+    checkAuth()
+      .catch((error) => {
+        console.error('checkAuth error:', error);
+        setLoading(false); // Ensure loading is set to false on error
+      })
+      .finally(() => {
+        clearTimeout(loadingTimeout);
+      });
   }, []);
 
   const checkAuth = useCallback(async () => {

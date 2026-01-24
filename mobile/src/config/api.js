@@ -33,7 +33,16 @@ api.interceptors.request.use(
     try {
       const token = await secureStorage.getItem(STORAGE_KEYS.TOKEN);
       if (token) {
+        // Always set Authorization header, even for FormData requests
+        // Use Object.assign to ensure header is set even if config.headers is undefined
+        config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        // Log warning if no token found for authenticated endpoints
+        const url = config.url || '';
+        if (!url.includes('/auth/') && !url.includes('/health')) {
+          console.warn('⚠️ No token found for request:', url);
+        }
       }
       logger.network(config.method.toUpperCase(), config.url, config.data);
     } catch (error) {

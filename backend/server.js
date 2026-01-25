@@ -117,7 +117,12 @@ app.get('/api/health', async (req, res) => {
 });
 
 const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
-app.use(notFoundHandler);
+
+// 404 handler must be after all routes
+app.use((req, res, next) => {
+  notFoundHandler(req, res);
+});
+
 app.use(errorHandler);
 
 initDatabase()

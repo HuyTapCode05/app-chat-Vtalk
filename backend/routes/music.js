@@ -24,15 +24,23 @@ router.get('/search', auth, async (req, res) => {
       // Try Zing MP3 API (unofficial)
       const zingApiUrl = `https://zingmp3.vn/api/search?q=${encodeURIComponent(q)}&type=song&page=1&count=${limit}`;
       
+      console.log('🎵 Calling Zing MP3 API:', zingApiUrl);
+      
       const response = await axios.get(zingApiUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-          'Referer': 'https://zingmp3.vn/'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Referer': 'https://zingmp3.vn/',
+          'Accept': 'application/json, text/plain, */*',
+          'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7'
         },
-        timeout: 10000
+        timeout: 15000
       });
 
+      console.log('🎵 Zing MP3 API response status:', response.status);
+      console.log('🎵 Zing MP3 API response data keys:', Object.keys(response.data || {}));
+
       if (response.data && response.data.data && response.data.data.items) {
+        console.log('✅ Found', response.data.data.items.length, 'songs from Zing MP3');
         const songs = await Promise.all(response.data.data.items.map(async (item) => {
           // Try to get audio URL from Zing MP3
           let audioUrl = null;
@@ -51,11 +59,24 @@ router.get('/search', auth, async (req, res) => {
               });
               
               if (detailResponse.data && detailResponse.data.data) {
-                // Zing MP3 audio URL format
-                audioUrl = detailResponse.data.data.streaming?.mp3?.['128'] || 
-                          detailResponse.data.data.streaming?.mp3?.['320'] ||
-                          detailResponse.data.data.streaming?.mp3?.['lossless'] ||
+                // Zing MP3 audio URL format - try different paths
+                const streaming = detailResponse.data.data.streaming;
+                audioUrl = streaming?.mp3?.['128'] || 
+                          streaming?.mp3?.['320'] ||
+                          streaming?.mp3?.['lossless'] ||
+                          streaming?.mp3?.['m4a']?.['128'] ||
+                          streaming?.mp3?.['m4a']?.['320'] ||
+                          streaming?.mp4?.['128'] ||
+                          streaming?.mp4?.['320'] ||
                           null;
+                
+                // Alternative: try to construct URL from encodeId
+                if (!audioUrl && songId) {
+                  // Zing MP3 streaming URL format: https://zingmp3.vn/api/v2/song/get/streaming?id={encodeId}
+                  audioUrl = `https://zingmp3.vn/api/v2/song/get/streaming?id=${songId}`;
+                }
+                
+                console.log('🎵 Audio URL for song', songId, ':', audioUrl ? 'Found' : 'Not found');
               }
             } catch (detailError) {
               console.warn('Could not get audio URL for song:', songId, detailError.message);
@@ -88,7 +109,13 @@ router.get('/search', auth, async (req, res) => {
         });
       }
     } catch (zingError) {
-      console.warn('Zing MP3 API failed, trying alternative:', zingError.message);
+      console.error('❌ Zing MP3 API failed:', {
+        message: zingError.message,
+        code: zingError.code,
+        status: zingError.response?.status,
+        statusText: zingError.response?.statusText,
+        data: zingError.response?.data
+      });
     }
 
     // Fallback: Return mock data or use alternative API

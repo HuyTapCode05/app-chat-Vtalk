@@ -1261,11 +1261,17 @@ const ChatScreen = ({ route, navigation }) => {
         <View
           style={[
             styles.messageBubble,
-            isOwn ? styles.ownBubble : styles.otherBubble,
+            isOwn ? styles.ownBubble : [
+              styles.otherBubble,
+              { backgroundColor: theme?.messageOther || (theme?.isDarkMode ? '#2D2D2D' : '#FFFFFF') }
+            ],
           ]}
         >
           {!isOwn && (
-            <Text style={styles.senderName}>
+            <Text style={[
+              styles.senderName,
+              { color: theme?.textSecondary || (theme?.isDarkMode ? '#B3B3B3' : '#666666') }
+            ]}>
               {(() => {
                 const senderId = String(item.sender?._id || item.sender?.id || item.sender || '');
                 return nicknames[senderId] || item.sender?.fullName || 'User';
@@ -1276,8 +1282,11 @@ const ChatScreen = ({ route, navigation }) => {
             <Text
               style={[
                 styles.messageText,
-                isOwn ? styles.ownMessageText : styles.otherMessageText,
-                styles.recalledText,
+                isOwn ? styles.ownMessageText : [
+                  styles.otherMessageText,
+                  { color: theme?.text || (theme?.isDarkMode ? '#FFFFFF' : '#333333') }
+                ],
+                { color: theme?.textMuted || (theme?.isDarkMode ? '#666666' : '#999999') },
               ]}
             >
               Tin nhắn đã được thu hồi
@@ -1300,14 +1309,22 @@ const ChatScreen = ({ route, navigation }) => {
             <Text
               style={[
                 styles.messageText,
-                isOwn ? styles.ownMessageText : styles.otherMessageText,
+                isOwn ? styles.ownMessageText : [
+                  styles.otherMessageText,
+                  { color: theme?.messageOtherText || (theme?.isDarkMode ? '#FFFFFF' : '#333333') }
+                ],
               ]}
             >
               {item.content}
             </Text>
           )}
           <View style={styles.messageFooter}>
-            <Text style={[styles.messageTime, isOwn && styles.ownMessageTime]}>
+            <Text style={[
+              styles.messageTime,
+              isOwn ? styles.ownMessageTime : {
+                color: theme?.textMuted || (theme?.isDarkMode ? '#666666' : '#999999')
+              }
+            ]}>
               {new Date(item.createdAt).toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -1351,10 +1368,13 @@ const ChatScreen = ({ route, navigation }) => {
                         <Ionicons
                           name="checkmark-done"
                           size={14}
-                          color="#999"
+                          color={theme?.textMuted || (theme?.isDarkMode ? '#666666' : '#999999')}
                           style={styles.readIcon}
                         />
-                        <Text style={[styles.readStatusText, styles.readStatusTextGray]}>Đã nhận</Text>
+                        <Text style={[
+                          styles.readStatusText,
+                          { color: theme?.textMuted || (theme?.isDarkMode ? '#666666' : '#999999') }
+                        ]}>Đã nhận</Text>
                       </View>
                     );
                   } else {
@@ -1364,10 +1384,13 @@ const ChatScreen = ({ route, navigation }) => {
                         <Ionicons
                           name="checkmark"
                           size={14}
-                          color="#999"
+                          color={theme?.textMuted || (theme?.isDarkMode ? '#666666' : '#999999')}
                           style={styles.readIcon}
                         />
-                        <Text style={[styles.readStatusText, styles.readStatusTextGray]}>Đã gửi</Text>
+                        <Text style={[
+                          styles.readStatusText,
+                          { color: theme?.textMuted || (theme?.isDarkMode ? '#666666' : '#999999') }
+                        ]}>Đã gửi</Text>
                       </View>
                     );
                   }
@@ -1534,13 +1557,19 @@ const ChatScreen = ({ route, navigation }) => {
         {/* Typing Indicator */}
         {typingUsers.length > 0 && (
           <View style={styles.typingContainer}>
-            <View style={styles.typingBubble}>
+            <View style={[
+              styles.typingBubble,
+              { backgroundColor: theme?.messageOther || (theme?.isDarkMode ? '#2D2D2D' : '#f0f0f0') }
+            ]}>
               <View style={styles.typingDots}>
                 <View style={[styles.typingDot, styles.typingDot1]} />
                 <View style={[styles.typingDot, styles.typingDot2]} />
                 <View style={[styles.typingDot, styles.typingDot3]} />
               </View>
-              <Text style={styles.typingText}>
+              <Text style={[
+                styles.typingText,
+                { color: theme?.textSecondary || (theme?.isDarkMode ? '#B3B3B3' : '#666666') }
+              ]}>
                 {typingUsers.length === 1 
                   ? `${typingUsers[0].fullName || 'Ai đó'} đang soạn tin...`
                   : `${typingUsers.length} người đang soạn tin...`}
@@ -1555,21 +1584,33 @@ const ChatScreen = ({ route, navigation }) => {
         onEmojiSelect={handleEmojiSelect}
       />
 
-      <View style={styles.inputContainer}>
+      <View style={[
+        styles.inputContainer,
+        {
+          backgroundColor: theme?.background || (theme?.isDarkMode ? '#121212' : '#FFFFFF'),
+          borderTopColor: theme?.border || (theme?.isDarkMode ? '#404040' : '#E5E5EA')
+        }
+      ]}>
         <TouchableOpacity
           style={styles.iconButton}
           onPress={handlePickImage}
           disabled={uploading}
         >
           {uploading ? (
-            <ActivityIndicator size="small" color="#00B14F" />
+            <ActivityIndicator size="small" color={theme?.primary || '#00B14F'} />
           ) : (
-            <Ionicons name="image-outline" size={24} color="#00B14F" />
+            <Ionicons name="image-outline" size={24} color={theme?.primary || '#00B14F'} />
           )}
         </TouchableOpacity>
 
         <TextInput
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme?.inputBackground || (theme?.isDarkMode ? '#2D2D2D' : '#F2F2F7'),
+              color: theme?.text || (theme?.isDarkMode ? '#FFFFFF' : '#000000')
+            }
+          ]}
           placeholder="Nhập tin nhắn... (gõ @ để mention)"
           value={inputMessage}
           onChangeText={(text) => {
@@ -1588,7 +1629,7 @@ const ChatScreen = ({ route, navigation }) => {
           }}
           multiline
           maxLength={500}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme?.placeholder || (theme?.isDarkMode ? '#666666' : '#999999')}
         />
 
         <TouchableOpacity
@@ -1598,13 +1639,16 @@ const ChatScreen = ({ route, navigation }) => {
           <Ionicons
             name="happy-outline"
             size={24}
-            color={showEmojiPicker ? '#00B14F' : '#8E8E93'}
+            color={showEmojiPicker ? (theme?.primary || '#00B14F') : (theme?.textSecondary || (theme?.isDarkMode ? '#B3B3B3' : '#8E8E93'))}
           />
         </TouchableOpacity>
 
         {inputMessage.trim() ? (
           <TouchableOpacity
-            style={styles.sendButton}
+            style={[
+              styles.sendButton,
+              { backgroundColor: theme?.primary || '#00B14F' }
+            ]}
             onPress={handleSend}
           >
             <Ionicons name="send" size={20} color="#fff" />
@@ -1618,7 +1662,7 @@ const ChatScreen = ({ route, navigation }) => {
             <Ionicons 
               name="mic" 
               size={24} 
-              color={uploading ? COLORS.TEXT_SECONDARY : COLORS.PRIMARY} 
+              color={uploading ? (theme?.textSecondary || (theme?.isDarkMode ? '#B3B3B3' : COLORS.TEXT_SECONDARY)) : (theme?.primary || COLORS.PRIMARY)} 
             />
           </TouchableOpacity>
         )}

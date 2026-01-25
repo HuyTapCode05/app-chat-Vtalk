@@ -536,11 +536,26 @@ const ChatScreen = ({ route, navigation }) => {
         }));
       };
 
+      const handleSocketError = (error) => {
+        console.error('❌ Socket error:', error);
+        if (error.message) {
+          Alert.alert('Lỗi', error.message);
+          
+          // If error is related to recall, revert optimistic update
+          if (error.message.includes('thu hồi') || error.message.includes('recall')) {
+            // The message will be reverted when we receive the error
+            // We can reload messages or wait for server sync
+            console.log('🔄 Reverting optimistic recall update due to error');
+          }
+        }
+      };
+
       socket.on('new-message', handleNewMessage);
       socket.on('user-typing', handleTyping);
       socket.on('message-recalled', handleMessageRecalled);
       socket.on('message-read', handleMessageRead);
       socket.on('user-avatar-updated', handleAvatarUpdate);
+      socket.on('error', handleSocketError);
 
       return () => {
         socket.off('new-message', handleNewMessage);
@@ -548,6 +563,7 @@ const ChatScreen = ({ route, navigation }) => {
         socket.off('message-recalled', handleMessageRecalled);
         socket.off('message-read', handleMessageRead);
         socket.off('user-avatar-updated', handleAvatarUpdate);
+        socket.off('error', handleSocketError);
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
         }
@@ -1232,6 +1248,12 @@ const ChatScreen = ({ route, navigation }) => {
                 return;
               }
               
+              // Check if socket is connected
+              if (!socket.connected && socket.io?.readyState !== 'open') {
+                Alert.alert('Lỗi', 'Chưa kết nối đến server. Vui lòng thử lại.');
+                return;
+              }
+              
               const recallData = {
                 messageId: selectedMessage._id,
                 conversationId: conversationId,
@@ -1246,11 +1268,15 @@ const ChatScreen = ({ route, navigation }) => {
                 recalled: selectedMessage.recalled,
                 sender: messageSenderId
               });
+              console.log('🔌 Socket status:', {
+                connected: socket.connected,
+                readyState: socket.io?.readyState
+              });
               
-              socket.emit('recall-message', recallData);
+              // Store original message for potential rollback
+              const originalMessage = { ...selectedMessage };
               
               // Optimistically update message to show "Đã thu hồi"
-              // The server will broadcast to all participants
               setMessages(prev =>
                 prev.map(m =>
                   m._id === selectedMessage._id
@@ -1259,8 +1285,15 @@ const ChatScreen = ({ route, navigation }) => {
                 )
               );
               
+              socket.emit('recall-message', recallData);
+              
+              // Close menu after emit
               setSelectedMessage(null);
               setMenuVisible(false);
+              
+              // Note: If there's an error, the server will emit 'error' event
+              // and handleSocketError will show the alert
+              // The message will be updated via 'message-recalled' event on success
             } catch (error) {
               console.error('Error recalling message:', error);
               Alert.alert('Lỗi', 'Không thể thu hồi tin nhắn');

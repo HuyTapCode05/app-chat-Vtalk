@@ -617,10 +617,21 @@ const handleSocketConnection = (socket, io) => {
         const message = messages[messageIndex];
         const messageSender = message.sender;
         
+        // Normalize sender IDs for comparison
+        let messageSenderId;
+        if (typeof messageSender === 'object') {
+          messageSenderId = messageSender._id || messageSender.id || String(messageSender);
+        } else {
+          messageSenderId = String(messageSender);
+        }
+        const normalizedSenderId = String(senderId);
+        
         console.log('🔍 Verifying recall permission:', {
           messageSender,
+          messageSenderId,
           senderId,
-          match: messageSender === senderId
+          normalizedSenderId,
+          match: messageSenderId === normalizedSenderId
         });
         
         if (!senderId) {
@@ -629,10 +640,12 @@ const handleSocketConnection = (socket, io) => {
           return;
         }
         
-        if (messageSender !== senderId) {
+        if (messageSenderId !== normalizedSenderId) {
           console.error('❌ User cannot recall other user\'s message:', {
             messageSender,
+            messageSenderId,
             senderId,
+            normalizedSenderId,
             messageId
           });
           socket.emit('error', { message: 'Bạn chỉ có thể thu hồi tin nhắn của chính mình' });

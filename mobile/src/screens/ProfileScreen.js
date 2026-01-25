@@ -89,7 +89,10 @@ const ProfileScreen = ({ navigation }) => {
         <TouchableOpacity
           style={[styles.viewProfileButton, { borderColor: theme.primary, backgroundColor: theme.primaryLight }]}
           onPress={() => navigation.navigate('PersonalPage', { userId: user?.id })}
-        />
+        >
+          <Ionicons name="person-circle-outline" size={20} color={theme.primary} />
+          <Text style={[styles.viewProfileText, { color: theme.primary }]}>Xem trang cá nhân</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={[styles.section, { borderTopColor: theme.border }]}>

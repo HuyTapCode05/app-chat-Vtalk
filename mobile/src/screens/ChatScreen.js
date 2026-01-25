@@ -925,9 +925,8 @@ const ChatScreen = ({ route, navigation }) => {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
+        allowsEditing: false, // Không cắt ảnh, gửi full ảnh
+        quality: 1.0, // Chất lượng cao nhất
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -942,37 +941,78 @@ const ChatScreen = ({ route, navigation }) => {
   const uploadImage = async (imageUri) => {
     setUploading(true);
     try {
-      const formData = new FormData();
-      const filename = imageUri.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image/jpeg`;
-
-      formData.append('image', {
-        uri: Platform.OS === 'ios' ? imageUri.replace('file://', '') : imageUri,
-        name: filename || 'image.jpg',
-        type: type || 'image/jpeg',
-      });
       const conversationId = conversation._id || conversation.id;
       if (!conversationId) {
         Alert.alert('Lỗi', 'Không tìm thấy ID cuộc trò chuyện');
+        setUploading(false);
         return;
       }
+
+      // Prepare image URI for FormData
+      let uri = imageUri;
+      if (Platform.OS === 'ios') {
+        // iOS: remove file:// prefix if present
+        uri = uri.replace('file://', '');
+      } else {
+        // Android: keep as is, but ensure it's a valid file URI
+        if (!uri.startsWith('file://') && !uri.startsWith('content://')) {
+          uri = `file://${uri}`;
+        }
+      }
+
+      const filename = imageUri.split('/').pop() || `image_${Date.now()}.jpg`;
+      const match = /\.(\w+)$/.exec(filename.toLowerCase());
+      const extension = match ? match[1] : 'jpg';
+      const mimeType = extension === 'png' ? 'image/png' : 
+                       extension === 'gif' ? 'image/gif' : 
+                       'image/jpeg';
+
+      console.log('📤 Uploading image:', {
+        uri: uri.substring(0, 50) + '...',
+        filename,
+        mimeType,
+        conversationId,
+      });
+
+      const formData = new FormData();
+      formData.append('image', {
+        uri: uri,
+        name: filename,
+        type: mimeType,
+      } as any);
       formData.append('conversationId', conversationId);
       formData.append('type', 'image');
 
       const token = await storage.getItem('token');
+      if (!token) {
+        throw new Error('Không tìm thấy token xác thực');
+      }
+
+      console.log('📤 Sending image upload request...');
       const res = await fetch(`${BASE_URL}/api/messages`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type, let fetch set it automatically for FormData
         },
         body: formData,
       });
 
+      console.log('📨 Upload response status:', res.status);
+
       if (res.ok) {
         const message = await res.json();
-        if (socket) {
-          const conversationId = conversation._id || conversation.id;
+        console.log('✅ Image uploaded successfully:', message._id);
+        
+        // Add message to local state
+        setMessages((prev) => {
+          if (!Array.isArray(prev)) return [message];
+          return [...prev, message];
+        });
+        scrollToBottom();
+
+        // Emit via socket if available
+        if (socket && (socket.connected || socket.io?.readyState === 'open')) {
           socket.emit('send-message', {
             conversationId: conversationId,
             senderId: user.id,
@@ -981,11 +1021,14 @@ const ChatScreen = ({ route, navigation }) => {
           });
         }
       } else {
-        throw new Error('Upload failed');
+        const errorText = await res.text();
+        console.error('❌ Upload failed:', { status: res.status, error: errorText });
+        throw new Error(`Upload failed: ${res.status} ${errorText}`);
       }
     } catch (error) {
-      console.error('Error uploading image:', error);
-      Alert.alert('Lỗi', 'Không thể gửi ảnh');
+      console.error('❌ Error uploading image:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Không thể gửi ảnh';
+      Alert.alert('Lỗi', errorMessage);
     } finally {
       setUploading(false);
     }

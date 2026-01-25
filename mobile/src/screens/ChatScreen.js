@@ -979,7 +979,7 @@ const ChatScreen = ({ route, navigation }) => {
         uri: uri,
         name: filename,
         type: mimeType,
-      } as any);
+      });
       formData.append('conversationId', conversationId);
       formData.append('type', 'image');
 

@@ -101,7 +101,7 @@ const ProfileScreen = ({ navigation }) => {
           onPress={() => navigation.navigate('CreatePost')}
         >
           <Ionicons name="create-outline" size={24} color={theme.primary} />
-          <Text style={[styles.menuText, { color: theme.text }]}>Đăng trạng thái</Text>
+          <Text style={[styles.menuText, { color: theme.text }]}>Cập nhật trạng thái</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 

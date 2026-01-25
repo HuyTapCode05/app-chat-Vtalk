@@ -116,13 +116,13 @@ const StoryList = forwardRef(({ onCreateStory, onViewStory, refreshTrigger }, re
                   ]}
                   numberOfLines={3}
                 >
-                  {latestStory.content}
+                  {latestStory.content || ''}
                 </Text>
               </View>
             ) : (
               <View style={[styles.storyPreviewImage, { backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }]}>
                 <Text style={[styles.avatarText, { color: colors.textSecondary }]}>
-                  {user && user.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
+                  {user && user.fullName ? String(user.fullName).charAt(0).toUpperCase() : '?'}
                 </Text>
               </View>
             )}
@@ -132,14 +132,14 @@ const StoryList = forwardRef(({ onCreateStory, onViewStory, refreshTrigger }, re
           {stories.length > 1 && (
             <View style={[styles.storyCountBadge, { backgroundColor: colors.primary }]}>
               <Text style={[styles.storyCountText, { color: colors.background }]}>
-                {stories.length}
+                {String(stories.length || 0)}
               </Text>
             </View>
           )}
         </View>
         
         <Text style={[styles.storyUsername, { color: isDarkMode ? '#E0E0E0' : '#1C1E21', fontWeight: '500' }]} numberOfLines={1}>
-          {isOwn ? 'Nhật ký của bạn' : (user && user.fullName ? user.fullName : 'Người dùng')}
+          {isOwn ? 'Nhật ký của bạn' : (user && user.fullName ? String(user.fullName) : 'Người dùng')}
         </Text>
       </TouchableOpacity>
     );

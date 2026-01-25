@@ -53,9 +53,8 @@ const CreateStoryScreen = ({ navigation }) => {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All,
-        allowsEditing: true,
-        aspect: [9, 16],
-        quality: 0.8,
+        allowsEditing: false, // Không cắt ảnh, gửi full ảnh
+        quality: 1.0, // Chất lượng cao nhất
       });
 
       if (!result.canceled && result.assets[0]) {
@@ -80,16 +79,15 @@ const CreateStoryScreen = ({ navigation }) => {
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.All,
-        allowsEditing: true,
-        aspect: [9, 16],
-        quality: 0.8,
+        allowsEditing: false, // Không cắt ảnh, gửi full ảnh
+        quality: 1.0, // Chất lượng cao nhất
       });
 
       if (!result.canceled && result.assets[0]) {
         const asset = result.assets[0];
         setMediaUri(asset.uri);
         setStoryType(asset.type === 'video' ? 'video' : 'image');
-        setContent(''); // Clear text when taking photo
+        setContent(''); 
       }
     } catch (error) {
       console.error('Error taking photo:', error);
@@ -103,7 +101,6 @@ const CreateStoryScreen = ({ navigation }) => {
   };
 
   const createStory = async () => {
-    // Check if user is logged in
     if (!currentUser) {
       Alert.alert('Lỗi', 'Bạn cần đăng nhập để tạo story');
       return;
@@ -158,17 +155,12 @@ const CreateStoryScreen = ({ navigation }) => {
           platform: Platform.OS
         });
 
-        // Add caption if any
         if (content && content.trim()) {
           formData.append('content', content.trim());
         } else {
-          // For media stories without caption, send empty string instead of undefined
           formData.append('content', '');
         }
       }
-
-      // Use fetch instead of axios for FormData upload (axios has issues with FormData)
-      // Use same storage method as other upload screens for consistency
       const token = await storage.getItem('token');
       
       if (!token) {

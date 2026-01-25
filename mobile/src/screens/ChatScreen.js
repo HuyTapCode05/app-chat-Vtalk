@@ -1233,12 +1233,25 @@ const ChatScreen = ({ route, navigation }) => {
                 return;
               }
               
-              // Get sender ID from user or from message
-              const currentUserId = user.id || user._id;
-              const messageSenderId = selectedMessage.sender?._id || selectedMessage.sender?.id || selectedMessage.sender;
+              // Get sender ID from user or from message - normalize to string
+              const currentUserId = String(user.id || user._id || '');
+              const messageSenderId = String(
+                selectedMessage.sender?._id || 
+                selectedMessage.sender?.id || 
+                selectedMessage.sender || 
+                ''
+              );
               
-              // Verify user is the sender
-              if (currentUserId !== messageSenderId) {
+              console.log('🔍 Frontend recall check:', {
+                currentUserId,
+                messageSenderId,
+                match: currentUserId === messageSenderId,
+                user: { id: user.id, _id: user._id },
+                messageSender: selectedMessage.sender
+              });
+              
+              // Verify user is the sender - compare normalized strings
+              if (currentUserId && messageSenderId && currentUserId !== messageSenderId) {
                 Alert.alert('Lỗi', 'Bạn chỉ có thể thu hồi tin nhắn của chính mình');
                 return;
               }
@@ -1257,7 +1270,7 @@ const ChatScreen = ({ route, navigation }) => {
               const recallData = {
                 messageId: selectedMessage._id,
                 conversationId: conversationId,
-                senderId: currentUserId, // Include senderId for verification
+                senderId: currentUserId, // Include senderId for verification (normalized string)
               };
               
               console.log('🔄 Recalling message:', recallData);

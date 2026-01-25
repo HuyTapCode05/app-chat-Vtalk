@@ -617,36 +617,56 @@ const handleSocketConnection = (socket, io) => {
         const message = messages[messageIndex];
         const messageSender = message.sender;
         
-        // Normalize sender IDs for comparison
+        // Normalize sender IDs for comparison - handle all possible formats
         let messageSenderId;
-        if (typeof messageSender === 'object') {
-          messageSenderId = messageSender._id || messageSender.id || String(messageSender);
-        } else {
+        if (typeof messageSender === 'object' && messageSender !== null) {
+          // Handle object with _id or id property
+          messageSenderId = String(messageSender._id || messageSender.id || '');
+        } else if (messageSender) {
+          // Handle string or number
           messageSenderId = String(messageSender);
+        } else {
+          messageSenderId = '';
         }
-        const normalizedSenderId = String(senderId);
+        
+        // Normalize senderId from request
+        const normalizedSenderId = senderId ? String(senderId) : '';
+        
+        // Also get userId from socket (from authentication)
+        const socketUserId = socket.userId ? String(socket.userId) : null;
         
         console.log('🔍 Verifying recall permission:', {
           messageSender,
+          messageSenderType: typeof messageSender,
           messageSenderId,
           senderId,
           normalizedSenderId,
-          match: messageSenderId === normalizedSenderId
+          socketUserId,
+          match1: messageSenderId === normalizedSenderId,
+          match2: socketUserId ? messageSenderId === socketUserId : false
         });
         
-        if (!senderId) {
+        if (!senderId && !socketUserId) {
           console.error('❌ senderId is missing in recall request');
           socket.emit('error', { message: 'Thiếu thông tin người gửi' });
           return;
         }
         
-        if (messageSenderId !== normalizedSenderId) {
+        // Check if user is the sender - try both senderId from request and socket.userId
+        const isAuthorized = 
+          (normalizedSenderId && messageSenderId === normalizedSenderId) ||
+          (socketUserId && messageSenderId === socketUserId);
+        
+        if (!isAuthorized) {
           console.error('❌ User cannot recall other user\'s message:', {
             messageSender,
             messageSenderId,
             senderId,
             normalizedSenderId,
-            messageId
+            socketUserId,
+            messageId,
+            comparison1: messageSenderId === normalizedSenderId,
+            comparison2: socketUserId ? messageSenderId === socketUserId : false
           });
           socket.emit('error', { message: 'Bạn chỉ có thể thu hồi tin nhắn của chính mình' });
           return;

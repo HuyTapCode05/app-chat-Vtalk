@@ -127,12 +127,27 @@ const GroupsScreen = ({ navigation }) => {
     });
   };
 
+  const formatLastMessage = (message) => {
+    if (!message) return 'Chưa có tin nhắn';
+    
+    if (message.type === 'voice') {
+      return '🎤 Tin nhắn thoại';
+    } else if (message.type === 'image') {
+      return '📷 Hình ảnh';
+    } else if (message.recalled) {
+      return 'Tin nhắn đã được thu hồi';
+    } else {
+      return message.content || 'Tin nhắn';
+    }
+  };
+
   const getLastMessage = (group) => {
     if (!group.lastMessage) return 'Chưa có tin nhắn';
     const sender = group.lastMessage.sender;
     const senderId = sender?._id || sender?.id || sender;
     const isOwn = senderId === user?.id;
-    return `${isOwn ? 'Bạn: ' : ''}${group.lastMessage.content}`;
+    const formattedMessage = formatLastMessage(group.lastMessage);
+    return `${isOwn ? 'Bạn: ' : ''}${formattedMessage}`;
   };
 
   const filteredGroups = groups.filter((group) => {

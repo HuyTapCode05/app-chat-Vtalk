@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -179,6 +179,38 @@ const CreateStoryScreen = ({ navigation }) => {
     setMusicSearchResults([]);
     console.log('🎵 Music selected:', music);
   };
+
+  // Debounce search music
+  useEffect(() => {
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // If query is empty, clear results
+    if (!musicSearchQuery || !musicSearchQuery.trim()) {
+      setMusicSearchResults([]);
+      return;
+    }
+
+    // Only search if query length >= 2
+    if (musicSearchQuery.trim().length < 2) {
+      setMusicSearchResults([]);
+      return;
+    }
+
+    // Set new timeout for search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchMusic(musicSearchQuery);
+    }, 500); // 500ms debounce
+
+    // Cleanup function
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [musicSearchQuery]);
 
   const switchToTextMode = () => {
     setStoryType('text');
@@ -548,14 +580,7 @@ const CreateStoryScreen = ({ navigation }) => {
                     placeholder="Tìm kiếm nhạc..."
                     placeholderTextColor={colors.textSecondary || (isDarkMode ? '#666666' : '#999999')}
                     value={musicSearchQuery}
-                    onChangeText={(text) => {
-                      setMusicSearchQuery(text);
-                      if (text.trim().length > 2) {
-                        searchMusic(text);
-                      } else {
-                        setMusicSearchResults([]);
-                      }
-                    }}
+                    onChangeText={setMusicSearchQuery}
                   />
                   {searchingMusic && (
                     <Ionicons name="hourglass" size={18} color={colors.primary || '#007AFF'} style={styles.searchIcon} />

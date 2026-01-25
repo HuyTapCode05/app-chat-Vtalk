@@ -77,7 +77,7 @@ export const MentionOverlay = ({
           ]}
           numberOfLines={1}
         >
-          {item.username || item.name}
+          {String(item.username || item.name || 'User')}
         </Text>
         {(item.fullName || item.displayName) && (
           <Text 
@@ -87,7 +87,7 @@ export const MentionOverlay = ({
             ]}
             numberOfLines={1}
           >
-            {item.fullName || item.displayName}
+            {String(item.fullName || item.displayName || '')}
           </Text>
         )}
       </View>

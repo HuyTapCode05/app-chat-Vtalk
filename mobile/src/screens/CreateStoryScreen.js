@@ -332,9 +332,9 @@ const CreateStoryScreen = ({ navigation }) => {
         hasMedia: !!mediaUri
       });
 
-      // Add timeout to fetch request
+      // Add timeout to fetch request - increased to 60 seconds for large files with music
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
       try {
         const response = await fetch(uploadUrl, {

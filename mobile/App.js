@@ -44,6 +44,7 @@ import PersonalPageScreen from './src/screens/PersonalPageScreen';
 import CallScreen from './src/screens/CallScreen';
 import CreateGroupScreen from './src/screens/CreateGroupScreen';
 import CreateStoryScreen from './src/screens/CreateStoryScreen';
+import CreatePostScreen from './src/screens/CreatePostScreen';
 import StoryViewer from './src/screens/StoryViewer';
 import AdminScreen from './src/screens/AdminScreen';
 import IncomingCallHandler from './src/components/IncomingCallHandler';
@@ -385,6 +386,14 @@ function AppNavigator() {
             <Stack.Screen 
               name="CreateStory" 
               component={CreateStoryScreen}
+              options={{ 
+                headerShown: false,
+                presentation: 'modal'
+              }}
+            />
+            <Stack.Screen 
+              name="CreatePost" 
+              component={CreatePostScreen}
               options={{ 
                 headerShown: false,
                 presentation: 'modal'

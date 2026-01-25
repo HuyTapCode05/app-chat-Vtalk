@@ -12,12 +12,15 @@ import {
   Image,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import api from '../config/api';
 import { Ionicons } from '@expo/vector-icons';
 import { BASE_URL } from '../config/api';
 
 const CreateGroupScreen = ({ navigation, route }) => {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDarkMode = theme?.isDarkMode || false;
   const [groupName, setGroupName] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -125,20 +128,27 @@ const CreateGroupScreen = ({ navigation, route }) => {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: theme?.background || (isDarkMode ? '#121212' : '#FFFFFF') }]}>
+      <View style={[styles.header, { borderBottomColor: theme?.border || (isDarkMode ? '#404040' : '#e0e0e0') }]}>
         <TextInput
-          style={styles.groupNameInput}
+          style={[
+            styles.groupNameInput,
+            {
+              backgroundColor: theme?.inputBackground || (isDarkMode ? '#2D2D2D' : '#FFFFFF'),
+              borderColor: theme?.border || (isDarkMode ? '#404040' : '#e0e0e0'),
+              color: theme?.text || (isDarkMode ? '#FFFFFF' : '#000000'),
+            }
+          ]}
           placeholder="Tên nhóm"
           value={groupName}
           onChangeText={setGroupName}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme?.placeholder || (isDarkMode ? '#666666' : '#999999')}
         />
       </View>
 
       {/* Selected users chips */}
       {selectedUsers.length > 0 && (
-        <View style={styles.selectedContainer}>
+        <View style={[styles.selectedContainer, { backgroundColor: theme?.surface || (isDarkMode ? '#1E1E1E' : '#f5f5f5'), borderBottomColor: theme?.border || (isDarkMode ? '#404040' : '#e0e0e0') }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             {selectedUsers.map((userObj) => {
               const u = typeof userObj === 'object' ? userObj : null;
@@ -147,7 +157,7 @@ const CreateGroupScreen = ({ navigation, route }) => {
               const userAvatar = u?.avatar;
               
               return (
-                <View key={userId} style={styles.selectedChip}>
+                <View key={userId} style={[styles.selectedChip, { backgroundColor: theme?.card || (isDarkMode ? '#2D2D2D' : '#fff'), borderColor: theme?.primary || '#00B14F' }]}>
                   {userAvatar ? (
                     <Image
                       source={{
@@ -162,14 +172,14 @@ const CreateGroupScreen = ({ navigation, route }) => {
                       </Text>
                     </View>
                   )}
-                  <Text style={styles.chipText} numberOfLines={1}>
+                  <Text style={[styles.chipText, { color: theme?.text || (isDarkMode ? '#FFFFFF' : '#333333') }]} numberOfLines={1}>
                     {userName}
                   </Text>
                   <TouchableOpacity
                     onPress={() => removeSelectedUser(userId)}
                     style={styles.chipRemove}
                   >
-                    <Ionicons name="close-circle" size={18} color="#666" />
+                    <Ionicons name="close-circle" size={18} color={theme?.textSecondary || (isDarkMode ? '#B3B3B3' : '#666666')} />
                   </TouchableOpacity>
                 </View>
               );
@@ -179,14 +189,14 @@ const CreateGroupScreen = ({ navigation, route }) => {
       )}
 
       {/* Search bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { borderBottomColor: theme?.border || (isDarkMode ? '#404040' : '#e0e0e0') }]}>
+        <Ionicons name="search" size={20} color={theme?.placeholder || (isDarkMode ? '#666666' : '#999999')} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: theme?.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}
           placeholder="Tìm kiếm theo username..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme?.placeholder || (isDarkMode ? '#666666' : '#999999')}
           autoCapitalize="none"
         />
         {searchQuery.length > 0 && (
@@ -194,7 +204,7 @@ const CreateGroupScreen = ({ navigation, route }) => {
             onPress={() => setSearchQuery('')}
             style={styles.clearButton}
           >
-            <Ionicons name="close-circle" size={20} color="#999" />
+            <Ionicons name="close-circle" size={20} color={theme?.placeholder || (isDarkMode ? '#666666' : '#999999')} />
           </TouchableOpacity>
         )}
       </View>
@@ -203,8 +213,8 @@ const CreateGroupScreen = ({ navigation, route }) => {
       {searchQuery.trim() ? (
         searching ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color="#00B14F" />
-            <Text style={styles.searchHint}>Đang tìm kiếm...</Text>
+            <ActivityIndicator size="large" color={theme?.primary || '#00B14F'} />
+            <Text style={[styles.searchHint, { color: theme?.textSecondary || (isDarkMode ? '#B3B3B3' : '#999999') }]}>Đang tìm kiếm...</Text>
           </View>
         ) : searchResults.length > 0 ? (
           <FlatList
@@ -216,7 +226,11 @@ const CreateGroupScreen = ({ navigation, route }) => {
               );
               return (
                 <TouchableOpacity
-                  style={[styles.userItem, isSelected && styles.userItemSelected]}
+                  style={[
+                    styles.userItem,
+                    { borderBottomColor: theme?.divider || (isDarkMode ? '#2D2D2D' : '#f0f0f0') },
+                    isSelected && { backgroundColor: theme?.primaryLight || (isDarkMode ? '#1B3B1F' : '#f0fdf4') }
+                  ]}
                   onPress={() => toggleUserSelection(item)}
                 >
                   {item.avatar ? (
@@ -234,21 +248,21 @@ const CreateGroupScreen = ({ navigation, route }) => {
                     </View>
                   )}
                   <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{item.fullName}</Text>
-                    <Text style={styles.userUsername}>@{item.username}</Text>
+                    <Text style={[styles.userName, { color: theme?.text || (isDarkMode ? '#FFFFFF' : '#333333') }]}>{item.fullName}</Text>
+                    <Text style={[styles.userUsername, { color: theme?.textSecondary || (isDarkMode ? '#B3B3B3' : '#666666') }]}>@{item.username}</Text>
                   </View>
                   {isSelected ? (
-                    <Ionicons name="checkmark-circle" size={24} color="#00B14F" />
+                    <Ionicons name="checkmark-circle" size={24} color={theme?.primary || '#00B14F'} />
                   ) : (
-                    <Ionicons name="add-circle-outline" size={24} color="#00B14F" />
+                    <Ionicons name="add-circle-outline" size={24} color={theme?.primary || '#00B14F'} />
                   )}
                 </TouchableOpacity>
               );
             }}
             ListEmptyComponent={
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>Không tìm thấy người dùng</Text>
-                <Text style={styles.emptySubtext}>
+                <Text style={[styles.emptyText, { color: theme?.textSecondary || (isDarkMode ? '#B3B3B3' : '#666666') }]}>Không tìm thấy người dùng</Text>
+                <Text style={[styles.emptySubtext, { color: theme?.textMuted || (isDarkMode ? '#666666' : '#999999') }]}>
                   Thử tìm kiếm với username khác
                 </Text>
               </View>
@@ -256,25 +270,29 @@ const CreateGroupScreen = ({ navigation, route }) => {
           />
         ) : (
           <View style={styles.empty}>
-            <Ionicons name="search-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>Nhập username để tìm kiếm</Text>
-            <Text style={styles.emptySubtext}>
+            <Ionicons name="search-outline" size={64} color={theme?.textMuted || (isDarkMode ? '#666666' : '#cccccc')} />
+            <Text style={[styles.emptyText, { color: theme?.textSecondary || (isDarkMode ? '#B3B3B3' : '#666666') }]}>Nhập username để tìm kiếm</Text>
+            <Text style={[styles.emptySubtext, { color: theme?.textMuted || (isDarkMode ? '#666666' : '#999999') }]}>
               Ví dụ: @username
             </Text>
           </View>
         )
       ) : (
         <View style={styles.empty}>
-          <Ionicons name="people-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>Tìm kiếm thành viên</Text>
-          <Text style={styles.emptySubtext}>
+          <Ionicons name="people-outline" size={64} color={theme?.textMuted || (isDarkMode ? '#666666' : '#cccccc')} />
+          <Text style={[styles.emptyText, { color: theme?.textSecondary || (isDarkMode ? '#B3B3B3' : '#666666') }]}>Tìm kiếm thành viên</Text>
+          <Text style={[styles.emptySubtext, { color: theme?.textMuted || (isDarkMode ? '#666666' : '#999999') }]}>
             Nhập username để tìm và thêm thành viên vào nhóm
           </Text>
         </View>
       )}
 
       <TouchableOpacity
-        style={[styles.createButton, creating && styles.createButtonDisabled]}
+        style={[
+          styles.createButton,
+          { backgroundColor: theme?.primary || '#00B14F' },
+          creating && styles.createButtonDisabled
+        ]}
         onPress={handleCreateGroup}
         disabled={creating}
       >
@@ -291,16 +309,13 @@ const CreateGroupScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   groupNameInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -310,7 +325,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   searchIcon: {
     marginRight: 8,
@@ -322,20 +336,16 @@ const styles = StyleSheet.create({
   selectedContainer: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   selectedChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 6,
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#00B14F',
   },
   chipAvatar: {
     width: 24,
@@ -359,7 +369,6 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    color: '#333',
     marginRight: 4,
     maxWidth: 100,
   },
@@ -369,7 +378,6 @@ const styles = StyleSheet.create({
   searchHint: {
     marginTop: 12,
     fontSize: 14,
-    color: '#999',
   },
   clearButton: {
     padding: 4,
@@ -384,10 +392,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  userItemSelected: {
-    backgroundColor: '#f0fdf4',
   },
   avatar: {
     width: 50,
@@ -415,15 +419,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 4,
   },
   userUsername: {
     fontSize: 14,
-    color: '#666',
   },
   createButton: {
-    backgroundColor: '#00B14F',
     margin: 16,
     padding: 16,
     borderRadius: 8,
@@ -446,14 +447,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
     marginTop: 16,
     marginBottom: 8,
     fontWeight: '500',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
     textAlign: 'center',
   },
 });

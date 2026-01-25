@@ -63,6 +63,7 @@ app.use('/api/pinned-messages', require('./routes/pinnedMessages'));
 app.use('/api/close-friends', require('./routes/closeFriends'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/stories', require('./routes/stories'));
+app.use('/api/music', require('./routes/music'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/parental', require('./routes/parental'));
 app.use('/api/push-tokens', require('./routes/pushTokens'));

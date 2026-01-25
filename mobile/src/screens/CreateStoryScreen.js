@@ -33,6 +33,10 @@ const CreateStoryScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
   const [musicUri, setMusicUri] = useState(null);
   const [musicName, setMusicName] = useState(null);
+  const [musicSearchQuery, setMusicSearchQuery] = useState('');
+  const [musicSearchResults, setMusicSearchResults] = useState([]);
+  const [searchingMusic, setSearchingMusic] = useState(false);
+  const [selectedMusic, setSelectedMusic] = useState(null);
 
   const backgroundColors = [
     '#007AFF', '#FF3B30', '#FF9500', '#FFCC00',
@@ -131,6 +135,49 @@ const CreateStoryScreen = ({ navigation }) => {
   const removeMusic = () => {
     setMusicUri(null);
     setMusicName(null);
+    setSelectedMusic(null);
+  };
+
+  const searchMusic = async (query) => {
+    if (!query || !query.trim()) {
+      setMusicSearchResults([]);
+      return;
+    }
+
+    try {
+      setSearchingMusic(true);
+      const token = await storage.getItem('token');
+      
+      if (!token) {
+        Alert.alert('Lỗi', 'Bạn cần đăng nhập để tìm kiếm nhạc');
+        return;
+      }
+
+      const response = await api.get(`/music/search`, {
+        params: { q: query.trim(), limit: 20 }
+      });
+
+      if (response.data && response.data.success) {
+        setMusicSearchResults(response.data.songs || []);
+        console.log('🎵 Music search results:', response.data.songs?.length || 0);
+      } else {
+        setMusicSearchResults([]);
+      }
+    } catch (error) {
+      console.error('Error searching music:', error);
+      setMusicSearchResults([]);
+      // Don't show alert for search errors, just log
+    } finally {
+      setSearchingMusic(false);
+    }
+  };
+
+  const selectMusicFromSearch = (music) => {
+    setSelectedMusic(music);
+    setMusicName(`${music.title} - ${music.artists}`);
+    setMusicSearchQuery('');
+    setMusicSearchResults([]);
+    console.log('🎵 Music selected:', music);
   };
 
   const switchToTextMode = () => {
@@ -199,8 +246,16 @@ const CreateStoryScreen = ({ navigation }) => {
           formData.append('content', '');
         }
 
-        // Add music if selected
-        if (musicUri) {
+        // Add music if selected (from API or file)
+        if (selectedMusic) {
+          // Music from API search
+          formData.append('musicTitle', selectedMusic.title || '');
+          formData.append('musicArtists', selectedMusic.artists || '');
+          formData.append('musicThumbnail', selectedMusic.thumbnailUrl || '');
+          formData.append('musicSource', selectedMusic.source || '');
+          console.log('🎵 Appending music info from API:', selectedMusic);
+        } else if (musicUri) {
+          // Music from file
           const processedMusicUri = Platform.OS === 'ios' ? musicUri.replace('file://', '') : musicUri;
           const musicFileName = musicName || `music_${Date.now()}.mp3`;
           
@@ -450,31 +505,113 @@ const CreateStoryScreen = ({ navigation }) => {
                 Thêm nhạc
               </Text>
             </View>
-            {musicUri ? (
+            
+            {selectedMusic || musicUri ? (
               <View style={styles.musicSelected}>
                 <View style={styles.musicInfo}>
+                  {selectedMusic?.thumbnailUrl && (
+                    <Image 
+                      source={{ uri: selectedMusic.thumbnailUrl }} 
+                      style={styles.musicThumbnail}
+                    />
+                  )}
                   <Ionicons name="musical-note" size={16} color={colors.primary || '#007AFF'} />
-                  <Text 
-                    style={[styles.musicName, { color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}
-                    numberOfLines={1}
-                  >
-                    {musicName || 'Nhạc đã chọn'}
-                  </Text>
+                  <View style={styles.musicDetails}>
+                    <Text 
+                      style={[styles.musicName, { color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}
+                      numberOfLines={1}
+                    >
+                      {selectedMusic ? `${selectedMusic.title} - ${selectedMusic.artists}` : (musicName || 'Nhạc đã chọn')}
+                    </Text>
+                    {selectedMusic?.source && (
+                      <Text style={[styles.musicSource, { color: colors.textSecondary || (isDarkMode ? '#666666' : '#999999') }]}>
+                        {selectedMusic.source}
+                      </Text>
+                    )}
+                  </View>
                 </View>
                 <TouchableOpacity onPress={removeMusic} style={styles.removeMusicButton}>
                   <Ionicons name="close-circle" size={20} color={colors.textSecondary || (isDarkMode ? '#666666' : '#999999')} />
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity 
-                onPress={pickMusic}
-                style={[styles.pickMusicButton, { borderColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0') }]}
-              >
-                <Ionicons name="add-circle-outline" size={20} color={colors.primary || '#007AFF'} />
-                <Text style={[styles.pickMusicText, { color: colors.primary || '#007AFF' }]}>
-                  Chọn nhạc từ thư viện
-                </Text>
-              </TouchableOpacity>
+              <>
+                {/* Music Search Bar */}
+                <View style={styles.musicSearchContainer}>
+                  <Ionicons name="search" size={18} color={colors.textSecondary || (isDarkMode ? '#666666' : '#999999')} style={styles.searchIcon} />
+                  <TextInput
+                    style={[styles.musicSearchInput, { 
+                      color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000'),
+                      backgroundColor: colors.inputBackground || (isDarkMode ? '#1E1E1E' : '#FFFFFF'),
+                      borderColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0')
+                    }]}
+                    placeholder="Tìm kiếm nhạc..."
+                    placeholderTextColor={colors.textSecondary || (isDarkMode ? '#666666' : '#999999')}
+                    value={musicSearchQuery}
+                    onChangeText={(text) => {
+                      setMusicSearchQuery(text);
+                      if (text.trim().length > 2) {
+                        searchMusic(text);
+                      } else {
+                        setMusicSearchResults([]);
+                      }
+                    }}
+                  />
+                  {searchingMusic && (
+                    <Ionicons name="hourglass" size={18} color={colors.primary || '#007AFF'} style={styles.searchIcon} />
+                  )}
+                </View>
+
+                {/* Music Search Results */}
+                {musicSearchResults.length > 0 && (
+                  <ScrollView style={styles.musicResultsContainer} nestedScrollEnabled>
+                    {musicSearchResults.map((song, index) => (
+                      <TouchableOpacity
+                        key={song.id || index}
+                        style={[styles.musicResultItem, { 
+                          backgroundColor: colors.inputBackground || (isDarkMode ? '#1E1E1E' : '#FFFFFF'),
+                          borderColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0')
+                        }]}
+                        onPress={() => selectMusicFromSearch(song)}
+                      >
+                        {song.thumbnailUrl ? (
+                          <Image source={{ uri: song.thumbnailUrl }} style={styles.musicResultThumbnail} />
+                        ) : (
+                          <View style={[styles.musicResultThumbnail, { backgroundColor: colors.primary || '#007AFF' }]}>
+                            <Ionicons name="musical-note" size={20} color="#FFFFFF" />
+                          </View>
+                        )}
+                        <View style={styles.musicResultInfo}>
+                          <Text 
+                            style={[styles.musicResultTitle, { color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}
+                            numberOfLines={1}
+                          >
+                            {song.title}
+                          </Text>
+                          <Text 
+                            style={[styles.musicResultArtist, { color: colors.textSecondary || (isDarkMode ? '#666666' : '#999999') }]}
+                            numberOfLines={1}
+                          >
+                            {song.artists}
+                          </Text>
+                        </View>
+                        <Ionicons name="add-circle" size={24} color={colors.primary || '#007AFF'} />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+
+                {/* Or choose from library */}
+                <TouchableOpacity 
+                  onPress={pickMusic}
+                  style={[styles.pickMusicButton, { borderColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0') }]}
+                >
+                  <Ionicons name="folder-outline" size={20} color={colors.primary || '#007AFF'} />
+                  <Text style={[styles.pickMusicText, { color: colors.primary || '#007AFF' }]}>
+                    Hoặc chọn từ thư viện
+                  </Text>
+                </TouchableOpacity>
+              </>
             )}
           </View>
         )}
@@ -679,6 +816,68 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
+  },
+  musicSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  musicSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    paddingVertical: 4,
+  },
+  musicResultsContainer: {
+    maxHeight: 200,
+    marginBottom: 12,
+  },
+  musicResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    marginBottom: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  musicResultThumbnail: {
+    width: 50,
+    height: 50,
+    borderRadius: 8,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  musicResultInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  musicResultTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  musicResultArtist: {
+    fontSize: 12,
+  },
+  musicThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  musicDetails: {
+    flex: 1,
+  },
+  musicSource: {
+    fontSize: 11,
+    marginTop: 2,
   },
   customization: {
     marginTop: 10,

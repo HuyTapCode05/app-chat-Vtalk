@@ -120,14 +120,24 @@ const initDatabase = () => {
         }
       });
 
-      // Add musicUrl column to stories table if it doesn't exist
-      db.run(`
-        ALTER TABLE stories ADD COLUMN musicUrl TEXT
-      `, (err) => {
-        // Ignore error if column already exists
-        if (err && !err.message.includes('duplicate column')) {
-          console.warn('Warning adding musicUrl column:', err.message);
-        }
+      // Add music columns to stories table if they don't exist
+      const musicColumns = [
+        { name: 'musicUrl', type: 'TEXT' },
+        { name: 'musicTitle', type: 'TEXT' },
+        { name: 'musicArtists', type: 'TEXT' },
+        { name: 'musicThumbnail', type: 'TEXT' },
+        { name: 'musicSource', type: 'TEXT' }
+      ];
+
+      musicColumns.forEach(col => {
+        db.run(`
+          ALTER TABLE stories ADD COLUMN ${col.name} ${col.type}
+        `, (err) => {
+          // Ignore error if column already exists
+          if (err && !err.message.includes('duplicate column')) {
+            console.warn(`Warning adding ${col.name} column:`, err.message);
+          }
+        });
       });
 
       // Story views table

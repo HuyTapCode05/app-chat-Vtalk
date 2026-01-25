@@ -13,7 +13,7 @@ router.post('/', auth, upload.fields([
   { name: 'music', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    const { type, content, backgroundColor, textColor } = req.body;
+    const { type, content, backgroundColor, textColor, musicTitle, musicArtists, musicThumbnail, musicSource } = req.body;
     const mediaFile = req.files?.media?.[0];
     const musicFile = req.files?.music?.[0];
     
@@ -23,6 +23,7 @@ router.post('/', auth, upload.fields([
       content: content?.substring(0, 50) + (content?.length > 50 ? '...' : ''),
       hasMedia: !!mediaFile,
       hasMusic: !!musicFile,
+      hasMusicInfo: !!(musicTitle || musicArtists),
       backgroundColor,
       textColor
     });
@@ -59,6 +60,15 @@ router.post('/', auth, upload.fields([
     if (musicFile) {
       storyData.musicUrl = `/uploads/${musicFile.filename}`;
       console.log('🎵 Music file uploaded:', musicFile.filename);
+    }
+
+    // Add music info from API search
+    if (musicTitle || musicArtists) {
+      storyData.musicTitle = musicTitle || null;
+      storyData.musicArtists = musicArtists || null;
+      storyData.musicThumbnail = musicThumbnail || null;
+      storyData.musicSource = musicSource || null;
+      console.log('🎵 Music info from API:', { musicTitle, musicArtists, musicSource });
     }
 
     // Create story

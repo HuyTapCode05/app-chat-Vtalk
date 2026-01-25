@@ -173,7 +173,21 @@ const CreateStoryScreen = ({ navigation }) => {
     }
   };
 
-  const selectMusicFromSearch = (music) => {
+  const selectMusicFromSearch = async (music) => {
+    // If no audioUrl, try to fetch it
+    if (!music.audioUrl && music.id && music.source === 'zingmp3') {
+      try {
+        console.log('🎵 Fetching audio URL for music:', music.id);
+        const response = await api.get(`/music/${music.id}`);
+        if (response.data && response.data.success && response.data.song?.audioUrl) {
+          music.audioUrl = response.data.song.audioUrl;
+          console.log('✅ Got audio URL:', music.audioUrl);
+        }
+      } catch (error) {
+        console.warn('⚠️ Could not fetch audio URL:', error.message);
+      }
+    }
+    
     setSelectedMusic(music);
     setMusicName(`${music.title} - ${music.artists}`);
     setMusicSearchQuery('');
@@ -287,6 +301,8 @@ const CreateStoryScreen = ({ navigation }) => {
           formData.append('musicArtists', selectedMusic.artists || '');
           formData.append('musicThumbnail', selectedMusic.thumbnailUrl || '');
           formData.append('musicSource', selectedMusic.source || '');
+          formData.append('musicAudioUrl', selectedMusic.audioUrl || '');
+          formData.append('musicId', selectedMusic.id || '');
           console.log('🎵 Appending music info from API:', selectedMusic);
         } else if (musicUri) {
           // Music from file

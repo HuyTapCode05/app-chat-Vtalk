@@ -33,21 +33,52 @@ router.get('/search', auth, async (req, res) => {
       });
 
       if (response.data && response.data.data && response.data.data.items) {
-        const songs = response.data.data.items.map(item => ({
-          id: item.encodeId || item.id,
-          title: item.title || 'Unknown Title',
-          artists: item.artistsNames || item.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
-          source: 'zingmp3',
-          thumbnailUrl: item.thumbnail || item.thumbnailM || item.thumbnailR || null,
-          duration: item.duration || null,
-          listen: item.listen || null,
-          viewCount: item.viewCount || null,
-          like: item.like || null,
-          comment: item.comment || null,
-          share: item.share || null,
-          publishedTime: item.releaseDate || null,
-          rank: item.rank || null,
-          userAvatar: null
+        const songs = await Promise.all(response.data.data.items.map(async (item) => {
+          // Try to get audio URL from Zing MP3
+          let audioUrl = null;
+          const songId = item.encodeId || item.id;
+          
+          if (songId) {
+            try {
+              // Get song detail to get audio URL
+              const detailUrl = `https://zingmp3.vn/api/song/info?id=${songId}`;
+              const detailResponse = await axios.get(detailUrl, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                  'Referer': 'https://zingmp3.vn/'
+                },
+                timeout: 5000
+              });
+              
+              if (detailResponse.data && detailResponse.data.data) {
+                // Zing MP3 audio URL format
+                audioUrl = detailResponse.data.data.streaming?.mp3?.['128'] || 
+                          detailResponse.data.data.streaming?.mp3?.['320'] ||
+                          detailResponse.data.data.streaming?.mp3?.['lossless'] ||
+                          null;
+              }
+            } catch (detailError) {
+              console.warn('Could not get audio URL for song:', songId, detailError.message);
+            }
+          }
+          
+          return {
+            id: songId,
+            title: item.title || 'Unknown Title',
+            artists: item.artistsNames || item.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+            source: 'zingmp3',
+            thumbnailUrl: item.thumbnail || item.thumbnailM || item.thumbnailR || null,
+            audioUrl: audioUrl, // Add audio URL for playback
+            duration: item.duration || null,
+            listen: item.listen || null,
+            viewCount: item.viewCount || null,
+            like: item.like || null,
+            comment: item.comment || null,
+            share: item.share || null,
+            publishedTime: item.releaseDate || null,
+            rank: item.rank || null,
+            userAvatar: null
+          };
         }));
 
         return res.json({
@@ -99,14 +130,55 @@ router.get('/search', auth, async (req, res) => {
 });
 
 /**
- * Get music info by ID
+ * Get music info and audio URL by ID
  */
 router.get('/:id', auth, async (req, res) => {
   try {
     const { id } = req.params;
     
-    // This would fetch detailed music info
-    // For now, return a simple response
+    if (!id || id === 'search') {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid music ID' 
+      });
+    }
+    
+    try {
+      // Get song detail from Zing MP3
+      const detailUrl = `https://zingmp3.vn/api/song/info?id=${id}`;
+      const detailResponse = await axios.get(detailUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://zingmp3.vn/'
+        },
+        timeout: 10000
+      });
+      
+      if (detailResponse.data && detailResponse.data.data) {
+        const songData = detailResponse.data.data;
+        const audioUrl = songData.streaming?.mp3?.['128'] || 
+                        songData.streaming?.mp3?.['320'] ||
+                        songData.streaming?.mp3?.['lossless'] ||
+                        null;
+        
+        return res.json({
+          success: true,
+          song: {
+            id: songData.encodeId || id,
+            title: songData.title || 'Unknown Title',
+            artists: songData.artistsNames || songData.artists?.map(a => a.name).join(', ') || 'Unknown Artist',
+            source: 'zingmp3',
+            thumbnailUrl: songData.thumbnail || songData.thumbnailM || songData.thumbnailR || null,
+            audioUrl: audioUrl,
+            duration: songData.duration || null
+          }
+        });
+      }
+    } catch (apiError) {
+      console.warn('Zing MP3 API failed for song ID:', id, apiError.message);
+    }
+    
+    // Fallback
     res.json({
       success: true,
       song: {
@@ -114,7 +186,8 @@ router.get('/:id', auth, async (req, res) => {
         title: 'Unknown Title',
         artists: 'Unknown Artist',
         source: 'zingmp3',
-        thumbnailUrl: null
+        thumbnailUrl: null,
+        audioUrl: null
       }
     });
   } catch (error) {

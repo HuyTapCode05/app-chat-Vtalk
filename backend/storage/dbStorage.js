@@ -1212,8 +1212,8 @@ const storiesStorage = {
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours from now
     
     await run(
-      `INSERT INTO stories (id, userId, type, content, mediaUrl, musicUrl, musicTitle, musicArtists, musicThumbnail, musicSource, backgroundColor, textColor, createdAt, expiresAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO stories (id, userId, type, content, mediaUrl, musicUrl, musicTitle, musicArtists, musicThumbnail, musicSource, musicAudioUrl, musicId, backgroundColor, textColor, createdAt, expiresAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         storyData.userId,
@@ -1225,6 +1225,8 @@ const storiesStorage = {
         storyData.musicArtists || null,
         storyData.musicThumbnail || null,
         storyData.musicSource || null,
+        storyData.musicAudioUrl || null,
+        storyData.musicId || null,
         storyData.backgroundColor || null,
         storyData.textColor || null,
         now,

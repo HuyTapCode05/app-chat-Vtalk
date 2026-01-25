@@ -126,7 +126,9 @@ const initDatabase = () => {
         { name: 'musicTitle', type: 'TEXT' },
         { name: 'musicArtists', type: 'TEXT' },
         { name: 'musicThumbnail', type: 'TEXT' },
-        { name: 'musicSource', type: 'TEXT' }
+        { name: 'musicSource', type: 'TEXT' },
+        { name: 'musicAudioUrl', type: 'TEXT' },
+        { name: 'musicId', type: 'TEXT' }
       ];
 
       musicColumns.forEach(col => {

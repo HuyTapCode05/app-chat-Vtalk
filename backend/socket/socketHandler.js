@@ -653,9 +653,20 @@ const handleSocketConnection = (socket, io) => {
         }
         
         // Check if user is the sender - try both senderId from request and socket.userId
+        // Also try comparing with just the ID part (in case of prefixes)
         const isAuthorized = 
           (normalizedSenderId && messageSenderId === normalizedSenderId) ||
-          (socketUserId && messageSenderId === socketUserId);
+          (socketUserId && messageSenderId === socketUserId) ||
+          (normalizedSenderId && messageSenderId.includes(normalizedSenderId)) ||
+          (socketUserId && messageSenderId.includes(socketUserId));
+        
+        console.log('🔍 Authorization check result:', {
+          isAuthorized,
+          check1: normalizedSenderId && messageSenderId === normalizedSenderId,
+          check2: socketUserId && messageSenderId === socketUserId,
+          check3: normalizedSenderId && messageSenderId.includes(normalizedSenderId),
+          check4: socketUserId && messageSenderId.includes(socketUserId)
+        });
         
         if (!isAuthorized) {
           console.error('❌ User cannot recall other user\'s message:', {
@@ -666,7 +677,9 @@ const handleSocketConnection = (socket, io) => {
             socketUserId,
             messageId,
             comparison1: messageSenderId === normalizedSenderId,
-            comparison2: socketUserId ? messageSenderId === socketUserId : false
+            comparison2: socketUserId ? messageSenderId === socketUserId : false,
+            comparison3: normalizedSenderId ? messageSenderId.includes(normalizedSenderId) : false,
+            comparison4: socketUserId ? messageSenderId.includes(socketUserId) : false
           });
           socket.emit('error', { message: 'Bạn chỉ có thể thu hồi tin nhắn của chính mình' });
           return;

@@ -1274,16 +1274,26 @@ const ChatScreen = ({ route, navigation }) => {
               };
               
               console.log('🔄 Recalling message:', recallData);
-              console.log('👤 User info:', { id: user.id, _id: user._id, currentUserId });
+              console.log('👤 User info:', { 
+                id: user.id, 
+                _id: user._id, 
+                currentUserId,
+                idType: typeof user.id,
+                _idType: typeof user._id
+              });
               console.log('📨 Message info:', {
                 _id: selectedMessage._id,
                 isTemp: selectedMessage.isTemp,
                 recalled: selectedMessage.recalled,
-                sender: messageSenderId
+                sender: selectedMessage.sender,
+                senderType: typeof selectedMessage.sender,
+                messageSenderId,
+                senderIdMatch: currentUserId === messageSenderId
               });
               console.log('🔌 Socket status:', {
                 connected: socket.connected,
-                readyState: socket.io?.readyState
+                readyState: socket.io?.readyState,
+                socketId: socket.id
               });
               
               // Store original message for potential rollback

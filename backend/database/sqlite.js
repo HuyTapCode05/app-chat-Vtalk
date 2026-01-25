@@ -120,6 +120,16 @@ const initDatabase = () => {
         }
       });
 
+      // Add musicUrl column to stories table if it doesn't exist
+      db.run(`
+        ALTER TABLE stories ADD COLUMN musicUrl TEXT
+      `, (err) => {
+        // Ignore error if column already exists
+        if (err && !err.message.includes('duplicate column')) {
+          console.warn('Warning adding musicUrl column:', err.message);
+        }
+      });
+
       // Story views table
       db.run(`
         CREATE TABLE IF NOT EXISTS story_views (

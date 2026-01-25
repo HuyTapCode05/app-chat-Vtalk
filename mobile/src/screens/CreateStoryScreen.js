@@ -31,6 +31,8 @@ const CreateStoryScreen = ({ navigation }) => {
   const [backgroundColor, setBackgroundColor] = useState('#007AFF');
   const [textColor, setTextColor] = useState('#FFFFFF');
   const [loading, setLoading] = useState(false);
+  const [musicUri, setMusicUri] = useState(null);
+  const [musicName, setMusicName] = useState(null);
 
   const backgroundColors = [
     '#007AFF', '#FF3B30', '#FF9500', '#FFCC00',
@@ -93,6 +95,42 @@ const CreateStoryScreen = ({ navigation }) => {
       console.error('Error taking photo:', error);
       Alert.alert('Lỗi', 'Không thể chụp ảnh/quay video');
     }
+  };
+
+  const pickMusic = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Lỗi', 'Cần quyền truy cập thư viện để chọn nhạc');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Audio,
+        allowsEditing: false,
+        quality: 1.0,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        setMusicUri(asset.uri);
+        setMusicName(asset.fileName || `music_${Date.now()}.mp3`);
+        console.log('🎵 Music selected:', {
+          uri: asset.uri,
+          fileName: asset.fileName,
+          duration: asset.duration,
+          mimeType: asset.mimeType
+        });
+      }
+    } catch (error) {
+      console.error('Error picking music:', error);
+      Alert.alert('Lỗi', 'Không thể chọn nhạc');
+    }
+  };
+
+  const removeMusic = () => {
+    setMusicUri(null);
+    setMusicName(null);
   };
 
   const switchToTextMode = () => {
@@ -159,6 +197,24 @@ const CreateStoryScreen = ({ navigation }) => {
           formData.append('content', content.trim());
         } else {
           formData.append('content', '');
+        }
+
+        // Add music if selected
+        if (musicUri) {
+          const processedMusicUri = Platform.OS === 'ios' ? musicUri.replace('file://', '') : musicUri;
+          const musicFileName = musicName || `music_${Date.now()}.mp3`;
+          
+          formData.append('music', {
+            uri: processedMusicUri,
+            type: 'audio/mpeg',
+            name: musicFileName
+          });
+          
+          console.log('🎵 Appending music file:', {
+            uri: processedMusicUri,
+            name: musicFileName,
+            platform: Platform.OS
+          });
         }
       }
       const token = await storage.getItem('token');
@@ -385,6 +441,44 @@ const CreateStoryScreen = ({ navigation }) => {
           </Text>
         </View>
 
+        {/* Music Selection - Only for video/image stories */}
+        {(storyType === 'video' || storyType === 'image') && (
+          <View style={[styles.musicContainer, { backgroundColor: colors.card || (isDarkMode ? '#2D2D2D' : '#F5F5F5'), borderColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0') }]}>
+            <View style={styles.musicHeader}>
+              <Ionicons name="musical-notes" size={20} color={colors.primary || '#007AFF'} />
+              <Text style={[styles.musicTitle, { color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}>
+                Thêm nhạc
+              </Text>
+            </View>
+            {musicUri ? (
+              <View style={styles.musicSelected}>
+                <View style={styles.musicInfo}>
+                  <Ionicons name="musical-note" size={16} color={colors.primary || '#007AFF'} />
+                  <Text 
+                    style={[styles.musicName, { color: colors.text || (isDarkMode ? '#FFFFFF' : '#000000') }]}
+                    numberOfLines={1}
+                  >
+                    {musicName || 'Nhạc đã chọn'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={removeMusic} style={styles.removeMusicButton}>
+                  <Ionicons name="close-circle" size={20} color={colors.textSecondary || (isDarkMode ? '#666666' : '#999999')} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                onPress={pickMusic}
+                style={[styles.pickMusicButton, { borderColor: colors.border || (isDarkMode ? '#404040' : '#E0E0E0') }]}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={colors.primary || '#007AFF'} />
+                <Text style={[styles.pickMusicText, { color: colors.primary || '#007AFF' }]}>
+                  Chọn nhạc từ thư viện
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Text Story Customization */}
         {storyType === 'text' && (
           <View style={styles.customization}>
@@ -533,6 +627,58 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-end',
     fontSize: 12,
     marginTop: 5,
+  },
+  musicContainer: {
+    marginTop: 15,
+    padding: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  musicHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  musicTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  musicSelected: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+  },
+  musicInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  musicName: {
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
+  },
+  removeMusicButton: {
+    padding: 4,
+  },
+  pickMusicButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  pickMusicText: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
   },
   customization: {
     marginTop: 10,

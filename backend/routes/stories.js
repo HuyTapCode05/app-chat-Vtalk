@@ -8,15 +8,21 @@ const path = require('path');
 // @route   POST /api/stories
 // @desc    Tạo story mới
 // @access  Private
-router.post('/', auth, upload.single('media'), async (req, res) => {
+router.post('/', auth, upload.fields([
+  { name: 'media', maxCount: 1 },
+  { name: 'music', maxCount: 1 }
+]), async (req, res) => {
   try {
     const { type, content, backgroundColor, textColor } = req.body;
+    const mediaFile = req.files?.media?.[0];
+    const musicFile = req.files?.music?.[0];
     
     console.log('📱 Creating story:', {
       userId: req.user.id,
       type,
       content: content?.substring(0, 50) + (content?.length > 50 ? '...' : ''),
-      hasMedia: !!req.file,
+      hasMedia: !!mediaFile,
+      hasMusic: !!musicFile,
       backgroundColor,
       textColor
     });
@@ -31,7 +37,7 @@ router.post('/', auth, upload.single('media'), async (req, res) => {
       return res.status(400).json({ message: 'Nội dung story text không được trống' });
     }
 
-    if ((type === 'image' || type === 'video') && !req.file) {
+    if ((type === 'image' || type === 'video') && !mediaFile) {
       return res.status(400).json({ message: 'Vui lòng chọn file media cho story' });
     }
 
@@ -45,8 +51,14 @@ router.post('/', auth, upload.single('media'), async (req, res) => {
     };
 
     // Add media URL if file uploaded
-    if (req.file) {
-      storyData.mediaUrl = `/uploads/${req.file.filename}`;
+    if (mediaFile) {
+      storyData.mediaUrl = `/uploads/${mediaFile.filename}`;
+    }
+
+    // Add music URL if file uploaded
+    if (musicFile) {
+      storyData.musicUrl = `/uploads/${musicFile.filename}`;
+      console.log('🎵 Music file uploaded:', musicFile.filename);
     }
 
     // Create story

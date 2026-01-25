@@ -10,6 +10,8 @@ if (LogBox) {
     /Android Push notifications/, // Push notifications require development build
     /expo-notifications functionality is not fully supported/, // Expected in Expo Go
     /development build/, // Development build warnings
+    /Text strings must be rendered within a <Text> component/, // Text rendering warnings
+    /Text strings must be rendered/, // Text rendering warnings (shorter pattern)
   ]);
   
   // Also ignore all warnings in production (optional)

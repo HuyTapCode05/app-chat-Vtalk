@@ -2,8 +2,8 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import Constants from 'expo-constants';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SOCKET_CONFIG } from '../utils/env';
+import { secureStorage } from '../utils/storage';
+import { STORAGE_KEYS } from '../utils/constants';
 import { logger } from '../utils/logger';
 
 const SocketContext = createContext();
@@ -42,14 +42,20 @@ export const SocketProvider = ({ children }) => {
     // Create async function to handle socket setup
     const setupSocket = async () => {
       try {
-        // Get token for authentication
-        const token = await AsyncStorage.getItem('@vtalk:token');
+        // Get token for authentication - use secureStorage with correct key
+        const token = await secureStorage.getItem(STORAGE_KEYS.TOKEN);
         
         // Don't connect if no token
         if (!token) {
           console.warn('⚠️ No auth token found, skipping socket connection');
           return;
         }
+        
+        console.log('🔌 Setting up socket connection...', {
+          socketUrl: SOCKET_URL,
+          hasToken: !!token,
+          tokenLength: token?.length
+        });
         
         const newSocket = io(SOCKET_URL, {
           transports: ['polling', 'websocket'], // Try polling first for better web compatibility
@@ -72,7 +78,11 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on('connect', () => {
-          console.log('✅ Connected to server');
+          console.log('✅ Connected to server:', {
+            socketId: newSocket.id,
+            connected: newSocket.connected,
+            transport: newSocket.io?.engine?.transport?.name
+          });
           if (user?.id) {
             // Send join với device info
             newSocket.emit('join', {
@@ -81,6 +91,7 @@ export const SocketProvider = ({ children }) => {
               userAgent: Constants.platform?.web ? navigator?.userAgent : undefined,
               deviceId: Constants.installationId || Constants.deviceId
             });
+            console.log('📤 Sent join event for user:', user.id);
           }
         });
 
@@ -115,7 +126,12 @@ export const SocketProvider = ({ children }) => {
         });
 
         newSocket.on('connect_error', (error) => {
-          logger.error('Socket connection error:', error.message);
+          console.error('❌ Socket connection error:', {
+            message: error.message,
+            type: error.type,
+            description: error.description,
+            socketUrl: SOCKET_URL
+          });
           // Don't spam logs for transport errors - they're usually temporary
           if (!error.message.includes('transport')) {
             logger.error('Non-transport connection error:', error);

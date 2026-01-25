@@ -37,6 +37,7 @@ const CreateStoryScreen = ({ navigation }) => {
   const [musicSearchResults, setMusicSearchResults] = useState([]);
   const [searchingMusic, setSearchingMusic] = useState(false);
   const [selectedMusic, setSelectedMusic] = useState(null);
+  const searchTimeoutRef = useRef(null);
 
   const backgroundColors = [
     '#007AFF', '#FF3B30', '#FF9500', '#FFCC00',
@@ -210,6 +211,7 @@ const CreateStoryScreen = ({ navigation }) => {
         clearTimeout(searchTimeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [musicSearchQuery]);
 
   const switchToTextMode = () => {

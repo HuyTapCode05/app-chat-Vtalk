@@ -1487,7 +1487,7 @@ const ChatScreen = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme?.background || (theme?.isDarkMode ? '#121212' : '#F2F2F7') }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardContainer}
@@ -1503,9 +1503,22 @@ const ChatScreen = ({ route, navigation }) => {
         )}
         {/* Search Bar */}
         {showSearch && (
-          <View style={styles.searchContainer}>
+          <View style={[
+            styles.searchContainer,
+            {
+              backgroundColor: theme?.card || (theme?.isDarkMode ? '#1E1E1E' : '#FFFFFF'),
+              borderBottomColor: theme?.border || (theme?.isDarkMode ? '#404040' : '#e0e0e0')
+            }
+          ]}>
             <TextInput
-              style={styles.searchInput}
+              style={[
+                styles.searchInput,
+                {
+                  backgroundColor: theme?.inputBackground || (theme?.isDarkMode ? '#2D2D2D' : '#FFFFFF'),
+                  borderColor: theme?.border || (theme?.isDarkMode ? '#404040' : '#dddddd'),
+                  color: theme?.text || (theme?.isDarkMode ? '#FFFFFF' : '#000000')
+                }
+              ]}
               placeholder="Tìm tin nhắn..."
               value={searchQuery}
               onChangeText={(text) => {
@@ -1516,7 +1529,7 @@ const ChatScreen = ({ route, navigation }) => {
                   setSearchResults([]);
                 }
               }}
-              placeholderTextColor="#8E8E93"
+              placeholderTextColor={theme?.placeholder || (theme?.isDarkMode ? '#666666' : '#8E8E93')}
             />
             <TouchableOpacity
               onPress={() => {
@@ -1525,15 +1538,24 @@ const ChatScreen = ({ route, navigation }) => {
                 setSearchResults([]);
               }}
             >
-              <Ionicons name="close" size={24} color="#666" />
+              <Ionicons name="close" size={24} color={theme?.textSecondary || (theme?.isDarkMode ? '#B3B3B3' : '#666666')} />
             </TouchableOpacity>
           </View>
         )}
 
         {/* Search Results */}
         {showSearch && searchResults.length > 0 && (
-          <View style={styles.searchResultsContainer}>
-            <Text style={styles.searchResultsTitle}>
+          <View style={[
+            styles.searchResultsContainer,
+            {
+              backgroundColor: theme?.card || (theme?.isDarkMode ? '#1E1E1E' : '#FFFFFF'),
+              borderBottomColor: theme?.border || (theme?.isDarkMode ? '#404040' : '#e0e0e0')
+            }
+          ]}>
+            <Text style={[
+              styles.searchResultsTitle,
+              { color: theme?.text || (theme?.isDarkMode ? '#FFFFFF' : '#000000') }
+            ]}>
               Tìm thấy {searchResults.length} tin nhắn
             </Text>
             <FlatList
@@ -1541,7 +1563,12 @@ const ChatScreen = ({ route, navigation }) => {
               keyExtractor={(item) => item._id}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  style={styles.searchResultItem}
+                  style={[
+                    styles.searchResultItem,
+                    {
+                      borderBottomColor: theme?.divider || (theme?.isDarkMode ? '#2D2D2D' : '#f0f0f0')
+                    }
+                  ]}
                   onPress={() => {
                     // Scroll to message
                     const messageIndex = messages.findIndex(m => (m._id || m.id) === (item._id || item.id));
@@ -1553,8 +1580,14 @@ const ChatScreen = ({ route, navigation }) => {
                     }
                   }}
                 >
-                  <Text style={styles.searchResultText}>{item.content}</Text>
-                  <Text style={styles.searchResultTime}>
+                  <Text style={[
+                    styles.searchResultText,
+                    { color: theme?.text || (theme?.isDarkMode ? '#FFFFFF' : '#333333') }
+                  ]}>{item.content}</Text>
+                  <Text style={[
+                    styles.searchResultTime,
+                    { color: theme?.textSecondary || (theme?.isDarkMode ? '#B3B3B3' : '#666666') }
+                  ]}>
                     {new Date(item.createdAt).toLocaleString('vi-VN')}
                   </Text>
                 </TouchableOpacity>
@@ -1882,7 +1915,6 @@ const ChatScreen = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F2F2F7',
     position: 'relative',
   },
   keyboardContainer: {
@@ -2126,15 +2158,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   searchInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -2142,30 +2171,24 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   searchResultsContainer: {
-    backgroundColor: '#fff',
     maxHeight: 200,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   searchResultsTitle: {
     padding: 12,
     fontSize: 14,
-    color: '#666',
     fontWeight: '600',
   },
   searchResultItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   searchResultText: {
     fontSize: 14,
-    color: '#333',
     marginBottom: 4,
   },
   searchResultTime: {
     fontSize: 12,
-    color: '#999',
   },
   reactionsContainer: {
     flexDirection: 'row',

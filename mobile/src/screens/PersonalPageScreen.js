@@ -98,6 +98,7 @@ const PersonalPageScreen = ({ route, navigation }) => {
   const [mutualFriends, setMutualFriends] = useState([]);
   const [mutualFriendsCount, setMutualFriendsCount] = useState(0);
   const [activeTab, setActiveTab] = useState('posts'); // 'posts', 'about', 'photos'
+  const [status, setStatus] = useState(null);
 
   useEffect(() => {
     // Reset user state when userId changes
@@ -122,10 +123,35 @@ const PersonalPageScreen = ({ route, navigation }) => {
       loadPosts();
       checkFriendStatus();
       loadMutualFriends();
+      loadStatus();
     } else if (user && isOwnProfile) {
       loadPosts();
+      loadStatus();
     }
   }, [user?.id, isOwnProfile]);
+
+  // Extract emoji from status content (first emoji character)
+  const extractStatusEmoji = (content) => {
+    if (!content) return null;
+    // Match first emoji (including multi-byte emojis)
+    const emojiMatch = content.match(/^[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u);
+    return emojiMatch ? emojiMatch[0] : null;
+  };
+
+  const loadStatus = async () => {
+    try {
+      const targetUserId = userId || currentUserId;
+      if (!targetUserId) return;
+      
+      const res = await api.get(`/posts/user/${targetUserId}/status`);
+      if (res.data) {
+        setStatus(res.data);
+      }
+    } catch (error) {
+      // Status is optional, so we don't show error
+      console.log('No status found or error:', error.message);
+    }
+  };
 
   const loadUserProfile = async () => {
     try {
@@ -949,6 +975,15 @@ const PersonalPageScreen = ({ route, navigation }) => {
                   </Text>
                 </View>
               )}
+              {status && extractStatusEmoji(status.content) && (
+                <View style={[dynamicStyles.statusBadge, { 
+                  backgroundColor: theme.background, 
+                  borderColor: theme.primary,
+                  shadowColor: theme.shadowColor || '#000',
+                }]}>
+                  <Text style={dynamicStyles.statusEmoji}>{extractStatusEmoji(status.content)}</Text>
+                </View>
+              )}
               {isOwnProfile && (
                 <TouchableOpacity
                   style={[dynamicStyles.editAvatarButton, { backgroundColor: theme.primary }]}
@@ -963,7 +998,12 @@ const PersonalPageScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={[dynamicStyles.name, { color: theme.text }]}>{user?.fullName || 'User'}</Text>
+            <View style={dynamicStyles.nameContainer}>
+              <Text style={[dynamicStyles.name, { color: theme.text }]}>{user?.fullName || 'User'}</Text>
+              {status && extractStatusEmoji(status.content) && (
+                <Text style={dynamicStyles.statusEmojiInline}>{extractStatusEmoji(status.content)}</Text>
+              )}
+            </View>
             <Text style={[dynamicStyles.username, { color: theme.textSecondary }]}>@{user?.username || 'username'}</Text>
           </View>
         </View>
@@ -1463,6 +1503,36 @@ const getStyles = (theme, isDarkMode) => StyleSheet.create({
     alignItems: 'center',
     borderWidth: 3,
     borderColor: theme?.card || theme?.surface || '#fff',
+  },
+  statusBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+    zIndex: 10,
+  },
+  statusEmoji: {
+    fontSize: 20,
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  statusEmojiInline: {
+    fontSize: 26,
+    marginLeft: 10,
   },
   name: {
     fontSize: 24,

@@ -47,6 +47,8 @@ import CreateStoryScreen from './src/screens/CreateStoryScreen';
 import CreatePostScreen from './src/screens/CreatePostScreen';
 import StoryViewer from './src/screens/StoryViewer';
 import AdminScreen from './src/screens/AdminScreen';
+import MyQRCodeScreen from './src/screens/MyQRCodeScreen';
+import QRScannerScreen from './src/screens/QRScannerScreen';
 import IncomingCallHandler from './src/components/IncomingCallHandler';
 import { COLORS } from './src/utils/constants';
 import notificationService from './src/services/notificationService';
@@ -395,6 +397,23 @@ function AppNavigator() {
               name="CreatePost" 
               component={CreatePostScreen}
               options={{ 
+                headerShown: false,
+                presentation: 'modal'
+              }}
+            />
+            <Stack.Screen
+              name="MyQRCode"
+              component={MyQRCodeScreen}
+              options={{
+                title: 'Mã QR của tôi',
+                presentation: 'modal'
+              }}
+            />
+            <Stack.Screen
+              name="QRScanner"
+              component={QRScannerScreen}
+              options={{
+                title: 'Quét mã QR',
                 headerShown: false,
                 presentation: 'modal'
               }}

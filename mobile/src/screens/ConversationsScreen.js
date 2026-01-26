@@ -37,6 +37,50 @@ const ConversationsScreen = () => {
   const [loading, setLoading] = useState(true);
   const [pinnedConversations, setPinnedConversations] = useState([]);
   const [archivedConversations, setArchivedConversations] = useState([]);
+  const [userStatuses, setUserStatuses] = useState({}); // { userId: status }
+
+  // Extract emoji from status content (first emoji character)
+  const extractStatusEmoji = (content) => {
+    if (!content) return null;
+    // Match first emoji (including multi-byte emojis)
+    const emojiMatch = content.match(/^[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u);
+    return emojiMatch ? emojiMatch[0] : null;
+  };
+
+  // Load statuses for all users in conversations
+  const loadUserStatuses = async () => {
+    try {
+      const userIds = new Set();
+      conversations.forEach(conv => {
+        const otherUser = conv.participants?.find(p => {
+          const pId = p._id || p.id || p;
+          return pId !== user?.id;
+        });
+        if (otherUser) {
+          const userId = typeof otherUser === 'object' ? (otherUser._id || otherUser.id) : otherUser;
+          if (userId) userIds.add(userId);
+        }
+      });
+
+      const statusPromises = Array.from(userIds).map(async (userId) => {
+        try {
+          const res = await api.get(`/posts/user/${userId}/status`);
+          return { userId, status: res.data };
+        } catch (error) {
+          return { userId, status: null };
+        }
+      });
+
+      const statusResults = await Promise.all(statusPromises);
+      const statusMap = {};
+      statusResults.forEach(({ userId, status }) => {
+        if (status) statusMap[userId] = status;
+      });
+      setUserStatuses(statusMap);
+    } catch (error) {
+      console.error('Error loading user statuses:', error);
+    }
+  };
 
   const getDisplayName = (conversation) => {
     if (!conversation) return 'Unknown';
@@ -82,6 +126,8 @@ const ConversationsScreen = () => {
       const res = await api.get('/conversations?type=private');
       console.log('✅ Conversations loaded:', res.data.length);
       setConversations(res.data);
+      // Load statuses after conversations are loaded
+      setTimeout(() => loadUserStatuses(), 100);
     } catch (error) {
       console.error('❌ Error loading conversations:', error);
     } finally {
@@ -122,6 +168,72 @@ const ConversationsScreen = () => {
     });
   };
 
+  // Handle socket events for sync
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleConversationUpdated = (data) => {
+      const { conversationId, lastMessage, lastMessageAt } = data;
+      console.log('📥 Conversation updated:', conversationId);
+      
+      // Update conversation in list
+      setConversations(prev => {
+        const updated = prev.map(conv => {
+          const convId = conv._id || conv.id;
+          if (convId && conversationId && convId.toString() === conversationId.toString()) {
+            return {
+              ...conv,
+              lastMessage,
+              lastMessageAt
+            };
+          }
+          return conv;
+        });
+        
+        // Sort by lastMessageAt (most recent first)
+        return updated.sort((a, b) => {
+          const timeA = new Date(a.lastMessageAt || 0);
+          const timeB = new Date(b.lastMessageAt || 0);
+          return timeB - timeA;
+        });
+      });
+    };
+
+    const handleSyncConversations = (data) => {
+      const { conversations: syncedConversations } = data;
+      console.log('📥 Syncing conversations:', syncedConversations?.length);
+      
+      if (syncedConversations && syncedConversations.length > 0) {
+        setConversations(prev => {
+          // Merge conversations, avoiding duplicates
+          const existingIds = new Set(prev.map(c => c._id || c.id));
+          const newConversations = syncedConversations.filter(c => {
+            const cId = c._id || c.id;
+            return cId && !existingIds.has(cId);
+          });
+          
+          if (newConversations.length > 0) {
+            console.log(`✅ Adding ${newConversations.length} new synced conversations`);
+            return [...prev, ...newConversations].sort((a, b) => {
+              const timeA = new Date(a.lastMessageAt || 0);
+              const timeB = new Date(b.lastMessageAt || 0);
+              return timeB - timeA;
+            });
+          }
+          return prev;
+        });
+      }
+    };
+
+    socket.on('conversation-updated', handleConversationUpdated);
+    socket.on('sync-conversations', handleSyncConversations);
+
+    return () => {
+      socket.off('conversation-updated', handleConversationUpdated);
+      socket.off('sync-conversations', handleSyncConversations);
+    };
+  }, [socket]);
+
   // Focus effect to reload when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
@@ -145,7 +257,12 @@ const ConversationsScreen = () => {
     
     const otherUserAvatar = typeof otherUser === 'object' ? otherUser.avatar : null;
     const otherUserOnline = typeof otherUser === 'object' ? otherUser.isOnline : false;
+    const otherUserId = typeof otherUser === 'object' ? (otherUser._id || otherUser.id) : otherUser;
     const avatarUrl = otherUserAvatar ? (otherUserAvatar.startsWith('http') ? otherUserAvatar : `${BASE_URL}${otherUserAvatar}`) : null;
+    
+    // Get status for this user
+    const userStatus = otherUserId ? userStatuses[otherUserId] : null;
+    const statusEmoji = userStatus ? extractStatusEmoji(userStatus.content) : null;
     
     return (
       <TouchableOpacity
@@ -166,6 +283,15 @@ const ConversationsScreen = () => {
               </Text>
             </View>
           )}
+          {statusEmoji && (
+            <View style={[styles.statusBadge, { 
+              backgroundColor: theme.background, 
+              borderColor: theme.primary,
+              shadowColor: theme.shadowColor || '#000',
+            }]}>
+              <Text style={styles.statusEmojiBadge}>{statusEmoji}</Text>
+            </View>
+          )}
           {otherUserOnline && (
             <View style={[styles.onlineIndicator, { backgroundColor: theme.onlineIndicator }]} />
           )}
@@ -174,12 +300,17 @@ const ConversationsScreen = () => {
         {/* Content */}
         <View style={styles.conversationInfo}>
           <View style={styles.conversationHeader}>
-            <Text 
-              style={[styles.conversationName, { color: theme.text }]} 
-              numberOfLines={1}
-            >
-              {String(displayName)}
-            </Text>
+            <View style={styles.nameContainer}>
+              <Text 
+                style={[styles.conversationName, { color: theme.text }]} 
+                numberOfLines={1}
+              >
+                {String(displayName)}
+              </Text>
+              {statusEmoji && (
+                <Text style={styles.statusEmojiInline}>{statusEmoji}</Text>
+              )}
+            </View>
             <Text style={[styles.time, { color: theme.textSecondary }]}>
               {item.lastMessageAt ? new Date(item.lastMessageAt).toLocaleTimeString('vi-VN', {
                 hour: '2-digit',
@@ -333,6 +464,26 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
   },
+  statusBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+    zIndex: 5,
+  },
+  statusEmojiBadge: {
+    fontSize: 16,
+  },
   onlineIndicator: {
     position: 'absolute',
     bottom: 2,
@@ -342,6 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    zIndex: 6,
   },
   conversationInfo: {
     flex: 1,
@@ -352,12 +504,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
   conversationName: {
     fontSize: 17,
     fontWeight: '600',
     flex: 1,
-    marginRight: 8,
     letterSpacing: -0.3,
+  },
+  statusEmojiInline: {
+    fontSize: 20,
+    marginLeft: 8,
   },
   time: {
     fontSize: 13,

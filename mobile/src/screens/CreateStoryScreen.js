@@ -25,7 +25,7 @@ const CreateStoryScreen = ({ navigation }) => {
   const { theme, isDarkMode } = useTheme();
   const { user: currentUser } = useAuth();
   const colors = theme || {};
-  const [storyType, setStoryType] = useState('text'); // 'text', 'image', 'video'
+  const [storyType, setStoryType] = useState('text');
   const [content, setContent] = useState('');
   const [mediaUri, setMediaUri] = useState(null);
   const [backgroundColor, setBackgroundColor] = useState('#007AFF');

@@ -163,7 +163,6 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       logger.success('User state cleared - navigation should reset to Login');
       
-      // On web, force reload to ensure clean state
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         setTimeout(() => {
           window.location.href = '/';

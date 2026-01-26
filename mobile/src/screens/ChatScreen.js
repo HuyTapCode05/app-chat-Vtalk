@@ -93,8 +93,36 @@ const ChatScreen = ({ route, navigation }) => {
   const [wallpaper, setWallpaper] = useState(null);
   const [showMentionOverlay, setShowMentionOverlay] = useState(false);
   const [mentionSearchText, setMentionSearchText] = useState('');
+  const [otherUserStatus, setOtherUserStatus] = useState(null);
   const typingTimeoutRef = useRef(null);
   const flatListRef = useRef(null);
+
+  // Extract emoji from status content (first emoji character)
+  const extractStatusEmoji = (content) => {
+    if (!content) return null;
+    // Match first emoji (including multi-byte emojis)
+    const emojiMatch = content.match(/^[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u);
+    return emojiMatch ? emojiMatch[0] : null;
+  };
+
+  // Load other user's status
+  useEffect(() => {
+    const loadOtherUserStatus = async () => {
+      if (!otherParticipantInfo?._id) return;
+      
+      try {
+        const res = await api.get(`/posts/user/${otherParticipantInfo._id}/status`);
+        if (res.data) {
+          setOtherUserStatus(res.data);
+        }
+      } catch (error) {
+        // Status is optional
+        console.log('No status found for other user');
+      }
+    };
+
+    loadOtherUserStatus();
+  }, [otherParticipantInfo?._id]);
 
   // Update header title when nicknames or participant info change
   useEffect(() => {
@@ -144,11 +172,16 @@ const ChatScreen = ({ route, navigation }) => {
         otherParticipantInfo.fullName ||
         conversationName ||
         'Chat';
+      
+      // Add status emoji to title if available
+      if (otherUserStatus && extractStatusEmoji(otherUserStatus.content)) {
+        title = `${extractStatusEmoji(otherUserStatus.content)} ${title}`;
+      }
     }
 
     console.log('📝 Setting header title to:', title);
     navigation.setOptions({ title });
-  }, [conversation?.type, conversation?.name, conversation?.participants, conversationName, otherParticipantInfo, nicknames, navigation]);
+  }, [conversation?.type, conversation?.name, conversation?.participants, conversationName, otherParticipantInfo, nicknames, otherUserStatus, navigation]);
 
   useEffect(() => {
     console.log('🔎 showChatHeaderMenu changed:', {
@@ -177,6 +210,16 @@ const ChatScreen = ({ route, navigation }) => {
       if (socket) {
         console.log('🔌 Joining conversation:', conversationId);
         socket.emit('join-conversation', conversationId);
+        
+        // Request message sync (Zalo-like) - sync messages since last check
+        const lastSyncTime = storage.getItem(`lastSync_${conversationId}`);
+        socket.emit('sync-messages', {
+          conversationId,
+          lastSyncTime: lastSyncTime || null
+        });
+        
+        // Update last sync time
+        storage.setItem(`lastSync_${conversationId}`, new Date().toISOString());
       }
 
       // Get other participant for profile view
@@ -550,11 +593,67 @@ const ChatScreen = ({ route, navigation }) => {
         }
       };
 
+      // Handle conversation updated (for sync across devices)
+      const handleConversationUpdated = (data) => {
+        const { conversationId, lastMessage, lastMessageAt } = data;
+        const currentConversationId = conversation?._id || conversation?.id;
+        
+        // Update current conversation if it matches
+        if (currentConversationId && conversationId && conversationId.toString() === currentConversationId.toString()) {
+          setConversation(prev => ({
+            ...prev,
+            lastMessage,
+            lastMessageAt
+          }));
+          
+          // If message is new and not already in list, add it
+          if (lastMessage && !messages.some(m => m._id === lastMessage._id)) {
+            handleNewMessage(lastMessage);
+          }
+        }
+      };
+
+      // Handle messages synced (when device connects and requests sync)
+      const handleMessagesSynced = (data) => {
+        const { conversationId, messages: syncedMessages } = data;
+        const currentConversationId = conversation?._id || conversation?.id;
+        
+        if (currentConversationId && conversationId && conversationId.toString() === currentConversationId.toString()) {
+          console.log(`📥 Received ${syncedMessages.length} synced messages`);
+          
+          setMessages(prev => {
+            // Merge synced messages, avoiding duplicates
+            const existingIds = new Set(prev.map(m => m._id));
+            const newMessages = syncedMessages.filter(m => !existingIds.has(m._id));
+            
+            if (newMessages.length > 0) {
+              console.log(`✅ Adding ${newMessages.length} new synced messages`);
+              return [...prev, ...newMessages].sort((a, b) => {
+                const timeA = new Date(a.createdAt || a.timestamp || 0);
+                const timeB = new Date(b.createdAt || b.timestamp || 0);
+                return timeA - timeB;
+              });
+            }
+            return prev;
+          });
+        }
+      };
+
+      // Handle sync conversations (when device connects)
+      const handleSyncConversations = (data) => {
+        console.log('📥 Received sync conversations:', data.conversations?.length);
+        // This will be handled by ConversationsScreen
+        // Just log for now
+      };
+
       socket.on('new-message', handleNewMessage);
       socket.on('user-typing', handleTyping);
       socket.on('message-recalled', handleMessageRecalled);
       socket.on('message-read', handleMessageRead);
       socket.on('user-avatar-updated', handleAvatarUpdate);
+      socket.on('conversation-updated', handleConversationUpdated);
+      socket.on('messages-synced', handleMessagesSynced);
+      socket.on('sync-conversations', handleSyncConversations);
       socket.on('error', handleSocketError);
 
       return () => {
@@ -562,6 +661,9 @@ const ChatScreen = ({ route, navigation }) => {
         socket.off('user-typing', handleTyping);
         socket.off('message-recalled', handleMessageRecalled);
         socket.off('message-read', handleMessageRead);
+        socket.off('conversation-updated', handleConversationUpdated);
+        socket.off('messages-synced', handleMessagesSynced);
+        socket.off('sync-conversations', handleSyncConversations);
         socket.off('user-avatar-updated', handleAvatarUpdate);
         socket.off('error', handleSocketError);
         if (typingTimeoutRef.current) {

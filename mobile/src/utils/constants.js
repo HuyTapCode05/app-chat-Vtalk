@@ -1,13 +1,7 @@
-/**
- * Application Constants
- * Centralized constants for better maintainability
- */
 
-// API Configuration
-export const API_TIMEOUT = 10000; // 10 seconds
+export const API_TIMEOUT = 10000; 
 export const DEFAULT_PAGE_SIZE = 50;
 
-// Message Types
 export const MESSAGE_TYPES = {
   TEXT: 'text',
   IMAGE: 'image',
@@ -16,7 +10,6 @@ export const MESSAGE_TYPES = {
   REPLY: 'reply',
 };
 
-// Message Status
 export const MESSAGE_STATUS = {
   SENDING: 'sending',
   SENT: 'sent', 
@@ -25,17 +18,13 @@ export const MESSAGE_STATUS = {
   FAILED: 'failed',
 };
 
-// Conversation Types
 export const CONVERSATION_TYPES = {
   PRIVATE: 'private',
   GROUP: 'group',
 };
 
-// Reaction Emojis
 export const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
-// UI Constants / Design System
-// Note: These are fallback colors. Use theme colors from ThemeContext when possible
 export const COLORS = {
   PRIMARY: '#00B14F',
   PRIMARY_DARK: '#008037',

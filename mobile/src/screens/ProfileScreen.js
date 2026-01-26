@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,41 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { BASE_URL } from '../config/api';
+import api from '../config/api';
+
+// Extract emoji from status content (first emoji character)
+const extractStatusEmoji = (content) => {
+  if (!content) return null;
+  // Match first emoji (including multi-byte emojis)
+  const emojiMatch = content.match(/^[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u);
+  return emojiMatch ? emojiMatch[0] : null;
+};
 
 const ProfileScreen = ({ navigation }) => {
   const { user, logout } = useAuth();
   const { theme } = useTheme();
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadStatus();
+    }
+  }, [user?.id]);
+
+  const loadStatus = async () => {
+    try {
+      const userId = user?.id || user?._id;
+      if (!userId) return;
+      
+      const res = await api.get(`/posts/user/${userId}/status`);
+      if (res.data) {
+        setStatus(res.data);
+      }
+    } catch (error) {
+      // Status is optional, so we don't show error
+      console.log('No status found or error:', error.message);
+    }
+  };
 
   const handleLogout = async () => {
     // On web, use window.confirm for better compatibility
@@ -74,16 +105,32 @@ const ProfileScreen = ({ navigation }) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.header, { backgroundColor: theme.surface }]}>
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-            <Text style={styles.avatarText}>
-              {user?.fullName?.charAt(0).toUpperCase() || 'U'}
-            </Text>
-          </View>
-        )}
-        <Text style={[styles.name, { color: theme.text }]}>{user?.fullName || 'User'}</Text>
+        <View style={styles.avatarContainer}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+              <Text style={styles.avatarText}>
+                {user?.fullName?.charAt(0).toUpperCase() || 'U'}
+              </Text>
+            </View>
+          )}
+          {status && extractStatusEmoji(status.content) && (
+            <View style={[styles.statusBadge, { 
+              backgroundColor: theme.background, 
+              borderColor: theme.primary,
+              shadowColor: theme.shadowColor || '#000',
+            }]}>
+              <Text style={styles.statusEmoji}>{extractStatusEmoji(status.content)}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.nameContainer}>
+          <Text style={[styles.name, { color: theme.text }]}>{user?.fullName || 'User'}</Text>
+          {status && extractStatusEmoji(status.content) && (
+            <Text style={styles.statusEmojiInline}>{extractStatusEmoji(status.content)}</Text>
+          )}
+        </View>
         <Text style={[styles.username, { color: theme.textSecondary }]}>@{user?.username || 'username'}</Text>
         <Text style={[styles.email, { color: theme.textMuted }]}>{user?.email || ''}</Text>
         <TouchableOpacity
@@ -102,6 +149,24 @@ const ProfileScreen = ({ navigation }) => {
         >
           <Ionicons name="create-outline" size={24} color={theme.primary} />
           <Text style={[styles.menuText, { color: theme.text }]}>Cập nhật trạng thái</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, { borderBottomColor: theme.divider }]}
+          onPress={() => navigation.navigate('MyQRCode')}
+        >
+          <Ionicons name="qr-code-outline" size={24} color={theme.primary} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Mã QR của tôi</Text>
+          <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.menuItem, { borderBottomColor: theme.divider }]}
+          onPress={() => navigation.navigate('QRScanner')}
+        >
+          <Ionicons name="scan-outline" size={24} color={theme.primary} />
+          <Text style={[styles.menuText, { color: theme.text }]}>Quét mã QR</Text>
           <Ionicons name="chevron-forward" size={20} color={theme.textMuted} />
         </TouchableOpacity>
 
@@ -160,19 +225,50 @@ const styles = StyleSheet.create({
     padding: 32,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
   avatarImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 16,
+  },
+  statusBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  statusEmoji: {
+    fontSize: 20,
+  },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  statusEmojiInline: {
+    fontSize: 26,
+    marginLeft: 10,
   },
   avatarText: {
     color: '#fff',

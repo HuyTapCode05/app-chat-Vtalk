@@ -31,6 +31,9 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import VerifyEmailScreen from './src/screens/VerifyEmailScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import VerifyOTPScreen from './src/screens/VerifyOTPScreen';
+import ResetPasswordScreen from './src/screens/ResetPasswordScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import ConversationsScreen from './src/screens/ConversationsScreen';
 import ContactsScreen from './src/screens/ContactsScreen';
@@ -49,6 +52,7 @@ import StoryViewer from './src/screens/StoryViewer';
 import AdminScreen from './src/screens/AdminScreen';
 import MyQRCodeScreen from './src/screens/MyQRCodeScreen';
 import QRScannerScreen from './src/screens/QRScannerScreen';
+import LoginDevicesScreen from './src/screens/LoginDevicesScreen';
 import IncomingCallHandler from './src/components/IncomingCallHandler';
 import { COLORS } from './src/utils/constants';
 import notificationService from './src/services/notificationService';
@@ -309,6 +313,21 @@ function AppNavigator() {
               component={VerifyEmailScreen}
               options={{ title: 'Xác thực Email', headerShown: false }}
             />
+            <Stack.Screen
+              name="ForgotPassword" 
+              component={ForgotPasswordScreen}
+              options={{ title: 'Quên mật khẩu', headerShown: false }}
+            />
+            <Stack.Screen
+              name="VerifyOTP" 
+              component={VerifyOTPScreen}
+              options={{ title: 'Xác thực OTP', headerShown: false }}
+            />
+            <Stack.Screen
+              name="ResetPassword" 
+              component={ResetPasswordScreen}
+              options={{ title: 'Đặt lại mật khẩu', headerShown: false }}
+            />
           </>
         ) : user.emailVerified === false || user.emailVerified === 0 ? (
           <>
@@ -416,6 +435,13 @@ function AppNavigator() {
                 title: 'Quét mã QR',
                 headerShown: false,
                 presentation: 'modal'
+              }}
+            />
+            <Stack.Screen
+              name="LoginDevices"
+              component={LoginDevicesScreen}
+              options={{
+                title: 'Quản lý đăng nhập'
               }}
             />
             <Stack.Screen 

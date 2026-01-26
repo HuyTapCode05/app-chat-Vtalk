@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import Constants from 'expo-constants';
+import * as Device from 'expo-device';
 import { secureStorage } from '../utils/storage';
 import { STORAGE_KEYS } from '../utils/constants';
 import { logger } from '../utils/logger';
@@ -84,14 +85,27 @@ export const SocketProvider = ({ children }) => {
             transport: newSocket.io?.engine?.transport?.name
           });
           if (user?.id) {
+            // Get device name
+            let deviceName = null;
+            if (Constants.platform?.web) {
+              deviceName = navigator?.userAgent || 'Web Browser';
+            } else {
+              try {
+                deviceName = Device.deviceName || Device.modelName || null;
+              } catch (error) {
+                console.log('Could not get device name:', error);
+              }
+            }
+            
             // Send join với device info
             newSocket.emit('join', {
               userId: user.id,
               platform: Constants.platform?.ios ? 'ios' : Constants.platform?.android ? 'android' : 'web',
               userAgent: Constants.platform?.web ? navigator?.userAgent : undefined,
-              deviceId: Constants.installationId || Constants.deviceId
+              deviceId: Constants.installationId || Constants.deviceId,
+              deviceName: deviceName
             });
-            console.log('📤 Sent join event for user:', user.id);
+            console.log('📤 Sent join event for user:', user.id, 'device:', deviceName);
           }
         });
 
@@ -106,10 +120,30 @@ export const SocketProvider = ({ children }) => {
           // Other reasons (transport error, ping timeout) will auto-reconnect
         });
 
-        newSocket.on('reconnect', (attemptNumber) => {
+        newSocket.on('reconnect', async (attemptNumber) => {
           console.log('🔄 Reconnected to server (attempt', attemptNumber, ')');
           if (user?.id) {
-            newSocket.emit('join', user.id);
+            // Get device name again
+            let deviceName = null;
+            if (Constants.platform?.web) {
+              deviceName = navigator?.userAgent || 'Web Browser';
+            } else {
+              try {
+                deviceName = Device.deviceName || Device.modelName || null;
+              } catch (error) {
+                console.log('Could not get device name on reconnect:', error);
+              }
+            }
+            
+            // Send join với device info
+            newSocket.emit('join', {
+              userId: user.id,
+              platform: Constants.platform?.ios ? 'ios' : Constants.platform?.android ? 'android' : 'web',
+              userAgent: Constants.platform?.web ? navigator?.userAgent : undefined,
+              deviceId: Constants.installationId || Constants.deviceId,
+              deviceName: deviceName
+            });
+            console.log('📤 Sent join event on reconnect for user:', user.id, 'device:', deviceName);
           }
         });
 

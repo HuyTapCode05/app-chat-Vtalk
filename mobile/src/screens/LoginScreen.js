@@ -104,6 +104,15 @@ const LoginScreen = ({ navigation }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
+              style={styles.forgotPasswordButton}
+              onPress={() => navigation.navigate('ForgotPassword')}
+            >
+              <Text style={[styles.forgotPasswordText, { color: 'rgba(255, 255, 255, 0.9)' }]}>
+                Quên mật khẩu?
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
               onPress={() => navigation.navigate('Register')}
               style={styles.linkButton}
             >
@@ -184,6 +193,13 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 16,
     textDecorationLine: 'underline',
+  },
+  forgotPasswordButton: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  forgotPasswordText: {
+    fontSize: 14,
   },
 });
 

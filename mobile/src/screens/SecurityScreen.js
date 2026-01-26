@@ -110,6 +110,20 @@ const SecurityScreen = ({ navigation }) => {
       <View style={[styles.section, { borderBottomColor: theme.divider, backgroundColor: theme.card }]}>
         <Text style={[styles.sectionTitle, { color: theme.text }]}>Bảo mật khác</Text>
 
+        <TouchableOpacity 
+          style={[styles.menuItem, { borderBottomColor: theme.divider }]}
+          onPress={() => navigation.navigate('LoginDevices')}
+        >
+          <Ionicons name="phone-portrait-outline" size={24} color={theme.primary} />
+          <View style={styles.menuText}>
+            <Text style={[styles.menuLabel, { color: theme.text }]}>Quản lý đăng nhập</Text>
+            <Text style={[styles.menuDescription, { color: theme.textSecondary }]}>
+              Xem và quản lý các thiết bị đang đăng nhập
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.textSecondary} />
+        </TouchableOpacity>
+
         <TouchableOpacity style={[styles.menuItem, { borderBottomColor: theme.divider }]}>
           <Ionicons name="lock-closed-outline" size={24} color={theme.primary} />
           <View style={styles.menuText}>

@@ -13,7 +13,7 @@ export const THEMES = {
     
     // Background colors
     background: '#F2F2F7',
-    surface: '#FFFFFF',
+    surface: '#F5F5F5',
     card: '#FFFFFF',
     
     // Text colors
